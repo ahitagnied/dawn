@@ -1,8 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 
+const IDLE_WIDTH = 40
+const IDLE_HEIGHT = 5
+const RECORDING_WIDTH = 70
+const RECORDING_HEIGHT = 28
+const WAVEFORM_BAR_COUNT = 13
+const WAVEFORM_BAR_WIDTH = 2.5
+const WAVEFORM_BAR_MAX_HEIGHT = 15
+const WAVEFORM_GAP = 1.5
+
 export default function App() {
   const [recording, setRecording] = useState(false)
-  const [audioLevels, setAudioLevels] = useState(Array(30).fill(0))
+  const [audioLevels, setAudioLevels] = useState(Array(WAVEFORM_BAR_COUNT).fill(0))
 
   const recRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -40,7 +49,7 @@ export default function App() {
 
     const updateWaveform = () => {
       analyser.getByteFrequencyData(dataArray)
-      const levels = Array.from(dataArray.slice(0, 30)).map((v) => v / 255)
+      const levels = Array.from(dataArray.slice(0, WAVEFORM_BAR_COUNT)).map((v) => v / 255)
       setAudioLevels(levels)
       animationRef.current = requestAnimationFrame(updateWaveform)
     }
@@ -90,15 +99,16 @@ export default function App() {
   return (
     <div
       style={{
-        width: recording ? 180 : 60,
-        height: recording ? 52 : 4,
-        borderRadius: recording ? 16 : 2,
+        width: recording ? RECORDING_WIDTH : IDLE_WIDTH,
+        height: recording ? RECORDING_HEIGHT : IDLE_HEIGHT,
+        borderRadius: recording ? 10 : 2.5,
         background: '#2a2a2a',
+        border: '1px solid rgba(255, 255, 255, 0.3)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 3,
-        padding: recording ? '0 16px' : 0,
+        gap: WAVEFORM_GAP,
+        padding: recording ? '0 8px' : 0,
         transition: 'all 0.3s ease'
       }}
     >
@@ -107,8 +117,8 @@ export default function App() {
             <div
               key={i}
               style={{
-                width: 2,
-                height: Math.max(4, level * 32),
+                width: WAVEFORM_BAR_WIDTH,
+                height: Math.max(2, level * WAVEFORM_BAR_MAX_HEIGHT),
                 background: '#fff',
                 borderRadius: 1,
                 transition: 'height 0.05s ease'
