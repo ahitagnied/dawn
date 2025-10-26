@@ -22,6 +22,7 @@ function createOverlayWindow(): void {
     focusable: true,
     alwaysOnTop: true,
     hasShadow: false,
+    title: 'Dawn Overlay',
     icon: join(__dirname, '../../resources/icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -62,6 +63,7 @@ function createMainWindow(): void {
     focusable: true,
     alwaysOnTop: false,
     hasShadow: true,
+    title: 'Dawn',
     icon: join(__dirname, '../../resources/icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -156,9 +158,24 @@ app.whenReady().then(() => {
   })
 
   app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow()
+    // Ensure overlay window exists (it should always be running)
+    const overlayWindow = BrowserWindow.getAllWindows().find(win =>
+      win.getTitle() === 'Dawn Overlay'
+    )
+    if (!overlayWindow) {
       createOverlayWindow()
+    }
+
+    // Ensure main window exists and is focused
+    const mainWindow = BrowserWindow.getAllWindows().find(win =>
+      win.getTitle() === 'Dawn'
+    )
+    if (!mainWindow) {
+      createMainWindow()
+    } else {
+      // Focus the existing main window
+      mainWindow.focus()
+      mainWindow.show()
     }
   })
 })
