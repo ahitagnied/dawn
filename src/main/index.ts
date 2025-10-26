@@ -1,4 +1,4 @@
-import { app, BrowserWindow, screen, ipcMain, clipboard } from 'electron'
+import { app, BrowserWindow, screen, ipcMain, clipboard, Tray, Menu } from 'electron'
 import { join } from 'path'
 import { electronApp, is } from '@electron-toolkit/utils'
 import { execFile } from 'node:child_process'
@@ -86,6 +86,37 @@ app.whenReady().then(() => {
 
   createMainWindow()
   createOverlayWindow()
+
+  // Create menu bar tray
+  const tray = new Tray(join(__dirname, '../../resources/icon-tray.png'))
+
+  // Create context menu for tray
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Open Dawn Window',
+      click: () => {
+        const mainWindow = BrowserWindow.getAllWindows().find(win =>
+          win.getTitle() === 'Dawn'
+        )
+        if (mainWindow) {
+          mainWindow.show()
+          mainWindow.focus()
+        } else {
+          createMainWindow()
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit Dawn',
+      click: () => {
+        app.quit()
+      }
+    }
+  ])
+
+  tray.setContextMenu(contextMenu)
+  tray.setToolTip('Dawn - Voice Recording App')
 
   let altDown = false
   let recording = false
