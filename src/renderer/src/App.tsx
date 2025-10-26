@@ -10,6 +10,23 @@ const WAVEFORM_BAR_MAX_HEIGHT = 15
 const WAVEFORM_GAP = 1.5
 
 export default function App() {
+  const urlParams = new URLSearchParams(window.location.search)
+  const windowType = urlParams.get('window') || 'overlay'
+
+  if (windowType === 'main') {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        fontSize: '24px',
+        fontWeight: 'bold'
+      }}>
+        Welcome to Dawn
+      </div>
+    )
+  }
   const [recording, setRecording] = useState(false)
   const [audioLevels, setAudioLevels] = useState(Array(WAVEFORM_BAR_COUNT).fill(0))
 

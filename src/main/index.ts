@@ -12,8 +12,8 @@ import Groq from 'groq-sdk'
 const envPath = join(__dirname, '../../.env')
 config({ path: envPath })
 
-function createWindow(): void {
-  const mainWindow = new BrowserWindow({
+function createOverlayWindow(): void {
+  const overlayWindow = new BrowserWindow({
     width: 200,
     height: 80,
     frame: false,
@@ -30,19 +30,19 @@ function createWindow(): void {
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    overlayWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '?window=overlay')
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    overlayWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
   const display = screen.getPrimaryDisplay()
   const bounds = display.bounds
   const x = Math.round(bounds.x + (bounds.width - 200) / 2)
   const y = Math.round(bounds.y + bounds.height - 80 - 50)
-  mainWindow.setPosition(x, y)
+  overlayWindow.setPosition(x, y)
 
-  mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-  mainWindow.setAlwaysOnTop(true, 'screen-saver')
+  overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+  overlayWindow.setAlwaysOnTop(true, 'screen-saver')
 
   // Ensure dock icon is visible on macOS
   if (process.platform === 'darwin') {
@@ -50,10 +50,40 @@ function createWindow(): void {
   }
 }
 
+function createMainWindow(): void {
+  const mainWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    minWidth: 400,
+    minHeight: 300,
+    frame: true,
+    transparent: false,
+    resizable: true,
+    focusable: true,
+    alwaysOnTop: false,
+    hasShadow: true,
+    icon: join(__dirname, '../../resources/icon.png'),
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false
+    }
+  })
+
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '?window=main')
+  } else {
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  }
+
+  // Center the main window on screen
+  mainWindow.center()
+}
+
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
-  
-  createWindow()
+
+  createMainWindow()
+  createOverlayWindow()
 
   let altDown = false
   let recording = false
@@ -126,7 +156,10 @@ app.whenReady().then(() => {
   })
 
   app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createMainWindow()
+      createOverlayWindow()
+    }
   })
 })
 
