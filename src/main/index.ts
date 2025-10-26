@@ -4,9 +4,9 @@ import { electronApp, is } from '@electron-toolkit/utils'
 import { execFile } from 'node:child_process'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import axios from 'axios'
 import { uIOhook } from 'uiohook-napi'
 import { config } from 'dotenv'
+import Groq from 'groq-sdk'
 
 // Load environment variables from .env file
 const envPath = join(__dirname, '../../.env')
@@ -88,20 +88,19 @@ app.whenReady().then(() => {
     const file = join(dir, `audio.${ext}`)
     writeFileSync(file, Buffer.from(buf))
 
-    const FormData = require('form-data')
     const fs = require('fs')
-    const form = new FormData()
-    form.append('file', fs.createReadStream(file))
-    form.append('model', 'whisper-1')
-
-    const resp = await axios.post('https://api.openai.com/v1/audio/transcriptions', form, {
-      headers: {
-        ...form.getHeaders(),
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-      }
+    const groq = new Groq({
+      apiKey: process.env.GROQ_API_KEY
     })
 
-    return { text: resp.data?.text ?? '' }
+    const transcription = await groq.audio.transcriptions.create({
+      file: fs.createReadStream(file),
+      model: "whisper-large-v3-turbo",
+      temperature: 0,
+      response_format: "verbose_json",
+    })
+
+    return { text: transcription.text ?? '' }
   })
 
   ipcMain.handle('stt:paste', async (_evt, { text }: { text: string }) => {

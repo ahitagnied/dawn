@@ -26,6 +26,7 @@
     "axios": "^1.12.2",
     "dotenv": "^17.2.3",
     "electron-updater": "^6.3.9",
+    "groq-sdk": "^0.34.0",
     "uiohook-napi": "^1.5.4"
   },
   "devDependencies": {
