@@ -2,21 +2,15 @@ import { app, BrowserWindow, screen, ipcMain, clipboard } from 'electron'
 import { join } from 'path'
 import { electronApp, is } from '@electron-toolkit/utils'
 import { execFile } from 'node:child_process'
-import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs'
+import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import axios from 'axios'
 import { uIOhook } from 'uiohook-napi'
+import { config } from 'dotenv'
 
-try {
-  const envPath = join(__dirname, '../../.env')
-  const envFile = readFileSync(envPath, 'utf-8')
-  envFile.split('\n').forEach(line => {
-    const [key, ...valueParts] = line.split('=')
-    if (key && valueParts.length) {
-      process.env[key.trim()] = valueParts.join('=').trim()
-    }
-  })
-} catch {}
+// Load environment variables from .env file
+const envPath = join(__dirname, '../../.env')
+config({ path: envPath })
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -25,10 +19,10 @@ function createWindow(): void {
     frame: false,
     transparent: true,
     resizable: false,
-    focusable: false,
+    focusable: true,
     alwaysOnTop: true,
-    skipTaskbar: true,
     hasShadow: false,
+    icon: join(__dirname, '../../resources/icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -49,6 +43,11 @@ function createWindow(): void {
 
   mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
   mainWindow.setAlwaysOnTop(true, 'screen-saver')
+
+  // Ensure dock icon is visible on macOS
+  if (process.platform === 'darwin') {
+    ;(app as any).dock?.show()
+  }
 }
 
 app.whenReady().then(() => {
