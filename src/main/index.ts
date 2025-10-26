@@ -44,7 +44,7 @@ function createWindow(): void {
   const display = screen.getPrimaryDisplay()
   const bounds = display.bounds
   const x = Math.round(bounds.x + (bounds.width - 200) / 2)
-  const y = Math.round(bounds.y + bounds.height - 80 - 20)
+  const y = Math.round(bounds.y + bounds.height - 80 - 50)
   mainWindow.setPosition(x, y)
 
   mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
