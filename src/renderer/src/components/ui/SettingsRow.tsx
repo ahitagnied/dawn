@@ -1,25 +1,27 @@
 import { ReactNode } from 'react'
+import { Theme, lightTheme } from '../../utils/theme'
 
 interface SettingsRowProps {
   title: string
   description: string
   children: ReactNode
+  theme?: Theme
 }
 
-export function SettingsRow({ title, description, children }: SettingsRowProps) {
+export function SettingsRow({ title, description, children, theme = lightTheme }: SettingsRowProps) {
   return (
     <div style={{ 
       display: 'flex', 
       justifyContent: 'space-between', 
       alignItems: 'center', 
       padding: '20px 0', 
-      borderBottom: '1px solid #f0f0f0' 
+      borderBottom: `1px solid ${theme.border}` 
     }}>
       <div>
-        <div style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', marginBottom: '4px' }}>
+        <div style={{ fontSize: '16px', fontWeight: '500', color: theme.text, marginBottom: '4px' }}>
           {title}
         </div>
-        <div style={{ fontSize: '14px', color: '#999' }}>
+        <div style={{ fontSize: '14px', color: theme.textSecondary }}>
           {description}
         </div>
       </div>

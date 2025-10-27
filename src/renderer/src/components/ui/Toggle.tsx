@@ -1,9 +1,12 @@
+import { Theme, lightTheme } from '../../utils/theme'
+
 interface ToggleProps {
   checked: boolean
   onChange: (val: boolean) => void
+  theme?: Theme
 }
 
-export function Toggle({ checked, onChange }: ToggleProps) {
+export function Toggle({ checked, onChange, theme = lightTheme }: ToggleProps) {
   return (
     <button
       onClick={() => onChange(!checked)}
@@ -12,7 +15,7 @@ export function Toggle({ checked, onChange }: ToggleProps) {
         height: '24px',
         borderRadius: '12px',
         border: 'none',
-        background: checked ? '#1a1a1a' : '#e0e0e0',
+        background: checked ? theme.toggleBgActive : theme.toggleBg,
         position: 'relative',
         cursor: 'pointer',
         transition: 'background 0.2s'
@@ -22,7 +25,7 @@ export function Toggle({ checked, onChange }: ToggleProps) {
         width: '20px',
         height: '20px',
         borderRadius: '10px',
-        background: 'white',
+        background: checked ? theme.toggleThumb : theme.background,
         position: 'absolute',
         top: '2px',
         left: checked ? '22px' : '2px',

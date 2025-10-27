@@ -8,6 +8,8 @@ interface Bridge {
   transcribe(mime: string, arrayBuffer: ArrayBuffer): Promise<{ text: string }>
   pasteText(text: string): Promise<boolean>
   sendTranscription(text: string): void
+  updatePushToTalkHotkey(hotkey: string): Promise<void>
+  updateAutoMute(enabled: boolean): Promise<void>
 }
 
 declare global {

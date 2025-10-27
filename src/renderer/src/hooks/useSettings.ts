@@ -9,6 +9,7 @@ export interface Settings {
   // Transcription settings
   smartTranscription: boolean
   pushToTalk: boolean
+  pushToTalkHotkey: string
   localTranscription: boolean
   
   // Assistant settings
@@ -25,6 +26,7 @@ const DEFAULT_SETTINGS: Settings = {
   darkMode: false,
   smartTranscription: false,
   pushToTalk: true,
+  pushToTalkHotkey: 'Option ⌥',
   localTranscription: true,
   autoCaptureScreenshot: false,
   autoCopy: true,

@@ -6,6 +6,7 @@ import { AssistantSettings } from '../components/settings/AssistantSettings'
 import { OutputSettings } from '../components/settings/OutputSettings'
 import { BackIcon, SettingsIcon, MicrophoneIcon, DocumentIcon, OutputIcon, InfoIcon } from '../components/icons'
 import { Button } from '../components/ui/Button'
+import { getTheme } from '../utils/theme'
 
 type SettingsTab = 'general' | 'transcription' | 'assistant' | 'output'
 
@@ -16,12 +17,13 @@ interface SettingsPageProps {
 export function SettingsPage({ onBack }: SettingsPageProps) {
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('general')
   const { settings, updateSetting } = useSettings()
+  const theme = getTheme(settings.darkMode)
 
   return (
     <div style={{ 
       width: '100%', 
       height: '100vh', 
-      background: 'white', 
+      background: theme.background, 
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 
       display: 'flex', 
       flexDirection: 'column', 
@@ -31,7 +33,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
       <div style={{ 
         WebkitAppRegion: 'drag', 
         height: '52px', 
-        background: 'white', 
+        background: theme.background, 
         position: 'absolute', 
         top: 0, 
         left: 0, 
@@ -46,19 +48,19 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         overflowY: 'auto' 
       }}>
         {settingsTab === 'general' && (
-          <GeneralSettings settings={settings} onUpdateSetting={updateSetting} />
+          <GeneralSettings settings={settings} onUpdateSetting={updateSetting} theme={theme} />
         )}
 
         {settingsTab === 'transcription' && (
-          <TranscriptionSettings settings={settings} onUpdateSetting={updateSetting} />
+          <TranscriptionSettings settings={settings} onUpdateSetting={updateSetting} theme={theme} />
         )}
 
         {settingsTab === 'assistant' && (
-          <AssistantSettings settings={settings} onUpdateSetting={updateSetting} />
+          <AssistantSettings settings={settings} onUpdateSetting={updateSetting} theme={theme} />
         )}
 
         {settingsTab === 'output' && (
-          <OutputSettings settings={settings} onUpdateSetting={updateSetting} />
+          <OutputSettings settings={settings} onUpdateSetting={updateSetting} theme={theme} />
         )}
       </div>
       
@@ -78,12 +80,12 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
             onClick={onBack} 
             variant="icon"
             style={{ 
-              border: '1px solid #e0e0e0', 
-              background: 'white' 
+              border: `1px solid ${theme.border}`, 
+              background: theme.background 
             }}
             title="Back"
           >
-            <BackIcon />
+            <BackIcon color={theme.text} />
           </Button>
           
           {/* Settings tab - General */}
@@ -92,9 +94,12 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
             variant="icon"
             active={settingsTab === 'general'}
             title="General"
+            style={{
+              background: settingsTab === 'general' ? theme.surface : 'transparent'
+            }}
           >
             <SettingsIcon 
-              color={settingsTab === 'general' ? '#1a1a1a' : '#999'} 
+              color={settingsTab === 'general' ? theme.text : theme.textSecondary} 
               size={20} 
             />
           </Button>
@@ -105,9 +110,12 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
             variant="icon"
             active={settingsTab === 'transcription'}
             title="Transcription"
+            style={{
+              background: settingsTab === 'transcription' ? theme.surface : 'transparent'
+            }}
           >
             <MicrophoneIcon 
-              color={settingsTab === 'transcription' ? '#1a1a1a' : '#999'} 
+              color={settingsTab === 'transcription' ? theme.text : theme.textSecondary} 
             />
           </Button>
           
@@ -117,9 +125,12 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
             variant="icon"
             active={settingsTab === 'assistant'}
             title="Assistant"
+            style={{
+              background: settingsTab === 'assistant' ? theme.surface : 'transparent'
+            }}
           >
             <DocumentIcon 
-              color={settingsTab === 'assistant' ? '#1a1a1a' : '#999'} 
+              color={settingsTab === 'assistant' ? theme.text : theme.textSecondary} 
             />
           </Button>
           
@@ -129,9 +140,12 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
             variant="icon"
             active={settingsTab === 'output'}
             title="Output"
+            style={{
+              background: settingsTab === 'output' ? theme.surface : 'transparent'
+            }}
           >
             <OutputIcon 
-              color={settingsTab === 'output' ? '#1a1a1a' : '#999'} 
+              color={settingsTab === 'output' ? theme.text : theme.textSecondary} 
             />
           </Button>
         </div>
@@ -153,7 +167,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'} 
           title="Info"
         >
-          <InfoIcon />
+          <InfoIcon color={theme.textSecondary} />
         </button>
       </div>
     </div>

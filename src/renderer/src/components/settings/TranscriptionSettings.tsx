@@ -1,45 +1,57 @@
+import { useState } from 'react'
 import { SettingsRow } from '../ui/SettingsRow'
 import { Toggle } from '../ui/Toggle'
 import { Button } from '../ui/Button'
+import { HotkeyDialog } from '../ui/HotkeyDialog'
 import { Settings } from '../../hooks/useSettings'
+import { Theme } from '../../utils/theme'
 
 interface TranscriptionSettingsProps {
   settings: Settings
   onUpdateSetting: <K extends keyof Settings>(key: K, value: Settings[K]) => void
+  theme: Theme
 }
 
-export function TranscriptionSettings({ settings, onUpdateSetting }: TranscriptionSettingsProps) {
+export function TranscriptionSettings({ settings, onUpdateSetting, theme }: TranscriptionSettingsProps) {
+  const [showHotkeyDialog, setShowHotkeyDialog] = useState(false)
+
   return (
     <>
-      <h1 style={{ fontSize: '32px', fontWeight: '600', color: '#1a1a1a', margin: '0 0 40px 0' }}>
+      <h1 style={{ fontSize: '32px', fontWeight: '600', color: theme.text, margin: '0 0 40px 0' }}>
         Transcription
       </h1>
       
       <div>
-        <SettingsRow title="Transcription Hotkey" description="Keyboard shortcut to start transcription">
-          <Button>Option ⌥ + Shift ⇧ + Z</Button>
+        <SettingsRow title="Transcription Hotkey" description="Keyboard shortcut to start transcription" theme={theme}>
+          <Button theme={theme}>Option ⌥ + Shift ⇧ + Z</Button>
         </SettingsRow>
 
-        <SettingsRow title="Push to Talk Hotkey" description="Hold this key for push-to-talk recording">
-          <Button>Option ⌥ + ~</Button>
+        <SettingsRow title="Push to Talk Hotkey" description="Hold this key for push-to-talk recording" theme={theme}>
+          <Button onClick={() => setShowHotkeyDialog(true)} theme={theme}>{settings.pushToTalkHotkey}</Button>
         </SettingsRow>
 
-        <SettingsRow title="Smart Transcription" description="Enhance transcriptions with formatting and emoji conversion">
-          <Toggle checked={settings.smartTranscription} onChange={(val) => onUpdateSetting('smartTranscription', val)} />
+        <SettingsRow title="Smart Transcription" description="Enhance transcriptions with formatting and emoji conversion" theme={theme}>
+          <Toggle checked={settings.smartTranscription} onChange={(val) => onUpdateSetting('smartTranscription', val)} theme={theme} />
         </SettingsRow>
 
-        <SettingsRow title="Push to Talk" description="Hold hotkey to record, release to transcribe">
-          <Toggle checked={settings.pushToTalk} onChange={(val) => onUpdateSetting('pushToTalk', val)} />
+        <SettingsRow title="Local Transcription" description="Use offline models for transcription" theme={theme}>
+          <Toggle checked={settings.localTranscription} onChange={(val) => onUpdateSetting('localTranscription', val)} theme={theme} />
         </SettingsRow>
 
-        <SettingsRow title="Local Transcription" description="Use offline models for transcription">
-          <Toggle checked={settings.localTranscription} onChange={(val) => onUpdateSetting('localTranscription', val)} />
-        </SettingsRow>
-
-        <SettingsRow title="Local Model" description="Select offline transcription model">
-          <Button>Base</Button>
+        <SettingsRow title="Local Model" description="Select offline transcription model" theme={theme}>
+          <Button theme={theme}>Base</Button>
         </SettingsRow>
       </div>
+
+      <HotkeyDialog
+        isOpen={showHotkeyDialog}
+        onClose={() => setShowHotkeyDialog(false)}
+        onSave={(hotkey) => {
+          onUpdateSetting('pushToTalkHotkey', hotkey)
+          window.bridge.updatePushToTalkHotkey(hotkey)
+        }}
+        currentHotkey={settings.pushToTalkHotkey}
+      />
     </>
   )
 }

@@ -1,5 +1,7 @@
 import { useTranscriptions } from '../hooks/useTranscriptions'
+import { useSettings } from '../hooks/useSettings'
 import { SettingsIcon, InfoIcon } from '../components/icons'
+import { getTheme } from '../utils/theme'
 
 interface MainWindowProps {
   onOpenSettings?: () => void
@@ -7,6 +9,8 @@ interface MainWindowProps {
 
 export function MainWindow({ onOpenSettings }: MainWindowProps) {
   const { transcriptions } = useTranscriptions()
+  const { settings } = useSettings()
+  const theme = getTheme(settings.darkMode)
 
   // Calculate stats
   const wordsIn = transcriptions.reduce((sum, t) => sum + t.wordCount, 0)
@@ -26,7 +30,7 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
     <div style={{ 
       width: '100%', 
       height: '100vh', 
-      background: 'white', 
+      background: theme.background, 
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 
       display: 'flex', 
       flexDirection: 'column', 
@@ -36,7 +40,7 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
       <div style={{ 
         WebkitAppRegion: 'drag', 
         height: '52px', 
-        background: 'white', 
+        background: theme.background, 
         position: 'absolute', 
         top: 0, 
         left: 0, 
@@ -57,7 +61,7 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
         <h1 style={{ 
           fontSize: '48px', 
           fontWeight: '400', 
-          color: '#1a1a1a', 
+          color: theme.text, 
           margin: '0 0 16px 0', 
           letterSpacing: '-0.5px' 
         }}>
@@ -68,7 +72,7 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
         <p style={{ 
           fontSize: '18px', 
           fontWeight: '400', 
-          color: '#666', 
+          color: theme.textSecondary, 
           margin: '0 0 64px 0' 
         }}>
           what would you like to build with dawn today?
@@ -80,54 +84,54 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
             <div style={{ 
               fontSize: '32px', 
               fontWeight: '400', 
-              color: '#1a1a1a', 
+              color: theme.text, 
               marginBottom: '8px' 
             }}>
               {wordsIn}
             </div>
-            <div style={{ fontSize: '14px', color: '#999' }}>words in</div>
+            <div style={{ fontSize: '14px', color: theme.textSecondary }}>words in</div>
           </div>
           
-          <div style={{ fontSize: '24px', color: '#e0e0e0' }}>·</div>
+          <div style={{ fontSize: '24px', color: theme.border }}>·</div>
           
           <div style={{ textAlign: 'center' }}>
             <div style={{ 
               fontSize: '32px', 
               fontWeight: '400', 
-              color: '#1a1a1a', 
+              color: theme.text, 
               marginBottom: '8px' 
             }}>
               {wordsOut}
             </div>
-            <div style={{ fontSize: '14px', color: '#999' }}>words out</div>
+            <div style={{ fontSize: '14px', color: theme.textSecondary }}>words out</div>
           </div>
           
-          <div style={{ fontSize: '24px', color: '#e0e0e0' }}>·</div>
+          <div style={{ fontSize: '24px', color: theme.border }}>·</div>
           
           <div style={{ textAlign: 'center' }}>
             <div style={{ 
               fontSize: '32px', 
               fontWeight: '400', 
-              color: '#1a1a1a', 
+              color: theme.text, 
               marginBottom: '8px' 
             }}>
               {totalSeconds}
             </div>
-            <div style={{ fontSize: '14px', color: '#999' }}>seconds</div>
+            <div style={{ fontSize: '14px', color: theme.textSecondary }}>seconds</div>
           </div>
           
-          <div style={{ fontSize: '24px', color: '#e0e0e0' }}>·</div>
+          <div style={{ fontSize: '24px', color: theme.border }}>·</div>
           
           <div style={{ textAlign: 'center' }}>
             <div style={{ 
               fontSize: '32px', 
               fontWeight: '400', 
-              color: '#1a1a1a', 
+              color: theme.text, 
               marginBottom: '8px' 
             }}>
               {wpm}
             </div>
-            <div style={{ fontSize: '14px', color: '#999' }}>wpm</div>
+            <div style={{ fontSize: '14px', color: theme.textSecondary }}>wpm</div>
           </div>
         </div>
       </div>
@@ -160,7 +164,7 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
           onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'} 
           title="Settings"
         >
-          <SettingsIcon />
+          <SettingsIcon color={theme.textSecondary} />
         </button>
         
         {/* Info button - bottom right */}
@@ -180,7 +184,7 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
           onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'} 
           title="Info"
         >
-          <InfoIcon />
+          <InfoIcon color={theme.textSecondary} />
         </button>
       </div>
     </div>

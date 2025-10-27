@@ -1,4 +1,5 @@
-import { ReactNode, CSSProperties } from 'react'
+import { ReactNode, CSSProperties, useState } from 'react'
+import { Theme, lightTheme } from '../../utils/theme'
 
 interface ButtonProps {
   onClick?: () => void
@@ -7,9 +8,12 @@ interface ButtonProps {
   title?: string
   active?: boolean
   style?: CSSProperties
+  theme?: Theme
 }
 
-export function Button({ onClick, children, variant = 'secondary', title, active = false, style }: ButtonProps) {
+export function Button({ onClick, children, variant = 'secondary', title, active = false, style, theme = lightTheme }: ButtonProps) {
+  const [isHovered, setIsHovered] = useState(false)
+  
   const baseStyle: CSSProperties = {
     cursor: 'pointer',
     transition: 'all 0.2s',
@@ -20,26 +24,26 @@ export function Button({ onClick, children, variant = 'secondary', title, active
     primary: {
       ...baseStyle,
       padding: '8px 24px',
-      border: '1px solid #e0e0e0',
+      border: `1px solid ${theme.border}`,
       borderRadius: '6px',
-      background: 'white',
-      color: '#1a1a1a',
+      background: isHovered ? theme.buttonHover : theme.buttonBg,
+      color: theme.text,
       fontSize: '14px',
       fontWeight: '500',
     },
     secondary: {
       ...baseStyle,
       padding: '8px 24px',
-      border: '1px solid #e0e0e0',
+      border: `1px solid ${theme.border}`,
       borderRadius: '6px',
-      background: 'white',
-      color: '#1a1a1a',
+      background: isHovered ? theme.buttonHover : theme.buttonBg,
+      color: theme.text,
       fontSize: '14px',
       fontWeight: '500',
     },
     icon: {
       ...baseStyle,
-      background: active ? '#f0f0f0' : 'transparent',
+      background: active ? theme.surface : 'transparent',
       borderRadius: '8px',
       width: '40px',
       height: '40px',
@@ -54,16 +58,8 @@ export function Button({ onClick, children, variant = 'secondary', title, active
       onClick={onClick}
       title={title}
       style={{ ...variantStyles[variant], ...style }}
-      onMouseEnter={(e) => {
-        if (variant !== 'icon') {
-          e.currentTarget.style.background = '#f5f5f5'
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (variant !== 'icon') {
-          e.currentTarget.style.background = 'white'
-        }
-      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       {children}
     </button>

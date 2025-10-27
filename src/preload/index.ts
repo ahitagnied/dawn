@@ -26,6 +26,12 @@ const bridge = {
   },
   sendTranscription(text: string) {
     ipcRenderer.send('transcription:completed', { text })
+  },
+  updatePushToTalkHotkey(hotkey: string) {
+    return ipcRenderer.invoke('settings:update-hotkey', hotkey)
+  },
+  updateAutoMute(enabled: boolean) {
+    return ipcRenderer.invoke('settings:update-auto-mute', enabled)
   }
 }
 
