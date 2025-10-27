@@ -1,10 +1,13 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
+import { Transcription } from '../types/transcription'
 
 interface Bridge {
   onRecordStart(cb: () => void): () => void
   onRecordStop(cb: () => void): () => void
+  onTranscriptionAdd(cb: (transcription: Transcription) => void): () => void
   transcribe(mime: string, arrayBuffer: ArrayBuffer): Promise<{ text: string }>
   pasteText(text: string): Promise<boolean>
+  sendTranscription(text: string): void
 }
 
 declare global {

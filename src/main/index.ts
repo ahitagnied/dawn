@@ -8,9 +8,7 @@ import { uIOhook } from 'uiohook-napi'
 import { config } from 'dotenv'
 import Groq from 'groq-sdk'
 
-// Load environment variables from .env file
-const envPath = join(__dirname, '../../.env')
-config({ path: envPath })
+config({ path: join(__dirname, '../../.env') })
 
 function createOverlayWindow(): void {
   const overlayWindow = new BrowserWindow({
@@ -44,8 +42,8 @@ function createOverlayWindow(): void {
 
   overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
   overlayWindow.setAlwaysOnTop(true, 'screen-saver')
+  overlayWindow.show()
 
-  // Ensure dock icon is visible on macOS
   if (process.platform === 'darwin') {
     ;(app as any).dock?.show()
   }
@@ -57,13 +55,14 @@ function createMainWindow(): void {
     height: 600,
     minWidth: 400,
     minHeight: 300,
-    frame: true,
+    titleBarStyle: 'hidden',
+    trafficLightPosition: { x: 20, y: 20 },
     transparent: false,
     resizable: true,
     focusable: true,
     alwaysOnTop: false,
     hasShadow: true,
-    title: 'Dawn',
+    title: '',
     icon: join(__dirname, '../../resources/icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -77,8 +76,17 @@ function createMainWindow(): void {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
-  // Center the main window on screen
   mainWindow.center()
+  
+  mainWindow.on('blur', () => {
+    mainWindow.setWindowButtonVisibility(true)
+  })
+}
+
+function findWindowByType(type: 'main' | 'overlay'): BrowserWindow | undefined {
+  return BrowserWindow.getAllWindows().find(win =>
+    win.webContents.getURL().includes(`window=${type}`)
+  )
 }
 
 app.whenReady().then(() => {
@@ -87,17 +95,12 @@ app.whenReady().then(() => {
   createMainWindow()
   createOverlayWindow()
 
-  // Create menu bar tray
   const tray = new Tray(join(__dirname, '../../resources/icon-tray.png'))
-
-  // Create context menu for tray
   const contextMenu = Menu.buildFromTemplate([
     {
       label: 'Open Dawn Window',
       click: () => {
-        const mainWindow = BrowserWindow.getAllWindows().find(win =>
-          win.getTitle() === 'Dawn'
-        )
+        const mainWindow = findWindowByType('main')
         if (mainWindow) {
           mainWindow.show()
           mainWindow.focus()
@@ -107,12 +110,7 @@ app.whenReady().then(() => {
       }
     },
     { type: 'separator' },
-    {
-      label: 'Quit Dawn',
-      click: () => {
-        app.quit()
-      }
-    }
+    { label: 'Quit Dawn', click: () => app.quit() }
   ])
 
   tray.setContextMenu(contextMenu)
@@ -122,24 +120,22 @@ app.whenReady().then(() => {
   let recording = false
 
   uIOhook.on('keydown', (e) => {
-    if (e.keycode === 56 || e.keycode === 3640) {
-      if (!altDown && !recording) {
-        altDown = true
-        recording = true
-        const w = BrowserWindow.getAllWindows()[0]
-        if (w) w.webContents.send('record:start')
-      }
+    if ((e.keycode === 56 || e.keycode === 3640) && !altDown && !recording) {
+      altDown = true
+      recording = true
+      BrowserWindow.getAllWindows().forEach(window => {
+        window.webContents.send('record:start')
+      })
     }
   })
 
   uIOhook.on('keyup', (e) => {
-    if (e.keycode === 56 || e.keycode === 3640) {
-      if (altDown && recording) {
-        altDown = false
-        recording = false
-        const w = BrowserWindow.getAllWindows()[0]
-        if (w) w.webContents.send('record:stop')
-      }
+    if ((e.keycode === 56 || e.keycode === 3640) && altDown && recording) {
+      altDown = false
+      recording = false
+      BrowserWindow.getAllWindows().forEach(window => {
+        window.webContents.send('record:stop')
+      })
     }
   })
 
@@ -152,9 +148,7 @@ app.whenReady().then(() => {
     writeFileSync(file, Buffer.from(buf))
 
     const fs = require('fs')
-    const groq = new Groq({
-      apiKey: process.env.GROQ_API_KEY
-    })
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
     const transcription = await groq.audio.transcriptions.create({
       file: fs.createReadStream(file),
@@ -181,32 +175,29 @@ app.whenReady().then(() => {
     return true
   })
 
-  ipcMain.on('record:stop', () => {
-    const w = BrowserWindow.getAllWindows()[0]
-    if (w) {
-      w.webContents.send('record:stop')
+  ipcMain.on('transcription:completed', (_event, { text }: { text: string }) => {
+    const wordCount = text.trim().split(/\s+/).filter(word => word.length > 0).length
+    const mainWindow = findWindowByType('main')
+
+    if (mainWindow) {
+      mainWindow.webContents.send('transcription:add', {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        text,
+        timestamp: Date.now(),
+        wordCount
+      })
     }
   })
 
-  app.on('activate', function () {
-    // Ensure overlay window exists (it should always be running)
-    const overlayWindow = BrowserWindow.getAllWindows().find(win =>
-      win.getTitle() === 'Dawn Overlay'
-    )
-    if (!overlayWindow) {
-      createOverlayWindow()
-    }
+  app.on('activate', () => {
+    if (!findWindowByType('overlay')) createOverlayWindow()
 
-    // Ensure main window exists and is focused
-    const mainWindow = BrowserWindow.getAllWindows().find(win =>
-      win.getTitle() === 'Dawn'
-    )
-    if (!mainWindow) {
-      createMainWindow()
-    } else {
-      // Focus the existing main window
+    const mainWindow = findWindowByType('main')
+    if (mainWindow) {
       mainWindow.focus()
       mainWindow.show()
+    } else {
+      createMainWindow()
     }
   })
 })
