@@ -18,10 +18,22 @@ function MainWindow() {
   const [showSettings, setShowSettings] = useState(false)
   const [settingsTab, setSettingsTab] = useState<'general' | 'transcription' | 'assistant' | 'output'>('general')
   
-  // Settings state
+  // General settings state
   const [soundEffects, setSoundEffects] = useState(false)
   const [autoMute, setAutoMute] = useState(true)
   const [darkMode, setDarkMode] = useState(false)
+  
+  // Transcription settings state
+  const [smartTranscription, setSmartTranscription] = useState(false)
+  const [pushToTalk, setPushToTalk] = useState(true)
+  const [localTranscription, setLocalTranscription] = useState(true)
+  
+  // Assistant settings state
+  const [autoCaptureScreenshot, setAutoCaptureScreenshot] = useState(false)
+  
+  // Output settings state
+  const [autoCopy, setAutoCopy] = useState(true)
+  const [pressEnterAfter, setPressEnterAfter] = useState(false)
 
   useEffect(() => {
     localStorage.setItem('transcriptions', JSON.stringify(transcriptions))
@@ -180,21 +192,179 @@ function MainWindow() {
           )}
 
           {settingsTab === 'transcription' && (
-            <div style={{ textAlign: 'center', padding: '100px 0' }}>
-              <h2 style={{ fontSize: '24px', color: '#666' }}>Transcription Settings</h2>
-            </div>
+            <>
+              <h1 style={{ fontSize: '32px', fontWeight: '600', color: '#1a1a1a', margin: '0 0 40px 0' }}>Transcription</h1>
+              
+              <div>
+                <SettingsRow title="Transcription Hotkey" description="Keyboard shortcut to start transcription">
+                  <button style={{
+                    padding: '8px 24px',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '6px',
+                    background: 'white',
+                    color: '#1a1a1a',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                    Option ⌥ + Shift ⇧ + Z
+                  </button>
+                </SettingsRow>
+
+                <SettingsRow title="Push to Talk Hotkey" description="Hold this key for push-to-talk recording">
+                  <button style={{
+                    padding: '8px 24px',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '6px',
+                    background: 'white',
+                    color: '#1a1a1a',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                    Option ⌥ + ~
+                  </button>
+                </SettingsRow>
+
+                <SettingsRow title="Smart Transcription" description="Enhance transcriptions with formatting and emoji conversion">
+                  <Toggle checked={smartTranscription} onChange={setSmartTranscription} />
+                </SettingsRow>
+
+                <SettingsRow title="Push to Talk" description="Hold hotkey to record, release to transcribe">
+                  <Toggle checked={pushToTalk} onChange={setPushToTalk} />
+                </SettingsRow>
+
+                <SettingsRow title="Local Transcription" description="Use offline models for transcription">
+                  <Toggle checked={localTranscription} onChange={setLocalTranscription} />
+                </SettingsRow>
+
+                <SettingsRow title="Local Model" description="Select offline transcription model">
+                  <button style={{
+                    padding: '8px 24px',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '6px',
+                    background: 'white',
+                    color: '#1a1a1a',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                    Base
+                  </button>
+                </SettingsRow>
+              </div>
+            </>
           )}
 
           {settingsTab === 'assistant' && (
-            <div style={{ textAlign: 'center', padding: '100px 0' }}>
-              <h2 style={{ fontSize: '24px', color: '#666' }}>Assistant Settings</h2>
-            </div>
+            <>
+              <h1 style={{ fontSize: '32px', fontWeight: '600', color: '#1a1a1a', margin: '0 0 40px 0' }}>Assistant</h1>
+              
+              <div>
+                <SettingsRow title="Assistant Hotkey" description="Keyboard shortcut to activate AI assistant">
+                  <button style={{
+                    padding: '8px 24px',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '6px',
+                    background: 'white',
+                    color: '#1a1a1a',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                    Option ⌥ + Shift ⇧ + S
+                  </button>
+                </SettingsRow>
+
+                <SettingsRow title="Auto-capture Screenshot" description="Take screenshot when assistant hotkey is pressed for visual context">
+                  <Toggle checked={autoCaptureScreenshot} onChange={setAutoCaptureScreenshot} />
+                </SettingsRow>
+
+                <SettingsRow title="Assistant Model" description="Select AI model for assistant responses">
+                  <button style={{
+                    padding: '8px 24px',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '6px',
+                    background: 'white',
+                    color: '#1a1a1a',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                    Llama 3.3 70B Versatile
+                  </button>
+                </SettingsRow>
+              </div>
+            </>
           )}
 
           {settingsTab === 'output' && (
-            <div style={{ textAlign: 'center', padding: '100px 0' }}>
-              <h2 style={{ fontSize: '24px', color: '#666' }}>Output Settings</h2>
-            </div>
+            <>
+              <h1 style={{ fontSize: '32px', fontWeight: '600', color: '#1a1a1a', margin: '0 0 40px 0' }}>Output</h1>
+              
+              <div>
+                <SettingsRow title="Auto Copy" description="Copy transcriptions to clipboard automatically">
+                  <Toggle checked={autoCopy} onChange={setAutoCopy} />
+                </SettingsRow>
+
+                <SettingsRow title="Press Enter After" description="Automatically press Enter after pasting">
+                  <Toggle checked={pressEnterAfter} onChange={setPressEnterAfter} />
+                </SettingsRow>
+
+                <SettingsRow title="Languages" description="Select transcription languages (1 selected)">
+                  <button style={{
+                    padding: '8px 24px',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '6px',
+                    background: 'white',
+                    color: '#1a1a1a',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                    Manage Languages
+                  </button>
+                </SettingsRow>
+
+                <SettingsRow title="Dictionary" description="Custom words for better transcription (0 words)">
+                  <button style={{
+                    padding: '8px 24px',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '6px',
+                    background: 'white',
+                    color: '#1a1a1a',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                    Manage Words
+                  </button>
+                </SettingsRow>
+
+                <SettingsRow title="Phrase Replacements" description="Replace phrases in transcriptions (0 rules)">
+                  <button style={{
+                    padding: '8px 24px',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '6px',
+                    background: 'white',
+                    color: '#1a1a1a',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                    Manage Phrases
+                  </button>
+                </SettingsRow>
+              </div>
+            </>
           )}
         </div>
         
