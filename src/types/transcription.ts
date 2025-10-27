@@ -3,6 +3,7 @@ export interface Transcription {
   text: string;
   timestamp: number;
   wordCount: number;
+  duration?: number; // Recording duration in seconds
 }
 
 export interface TranscriptionStats {
