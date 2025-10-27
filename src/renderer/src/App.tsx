@@ -15,6 +15,13 @@ function MainWindow() {
     const saved = localStorage.getItem('transcriptions')
     return saved ? JSON.parse(saved) : []
   })
+  const [showSettings, setShowSettings] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<'general' | 'transcription' | 'assistant' | 'output'>('general')
+  
+  // Settings state
+  const [soundEffects, setSoundEffects] = useState(false)
+  const [autoMute, setAutoMute] = useState(true)
+  const [darkMode, setDarkMode] = useState(false)
 
   useEffect(() => {
     localStorage.setItem('transcriptions', JSON.stringify(transcriptions))
@@ -39,6 +46,219 @@ function MainWindow() {
     if (hour < 12) return 'good morning,'
     if (hour < 18) return 'good afternoon,'
     return 'good evening,'
+  }
+
+  // Toggle component
+  const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (val: boolean) => void }) => (
+    <button
+      onClick={() => onChange(!checked)}
+      style={{
+        width: '44px',
+        height: '24px',
+        borderRadius: '12px',
+        border: 'none',
+        background: checked ? '#1a1a1a' : '#e0e0e0',
+        position: 'relative',
+        cursor: 'pointer',
+        transition: 'background 0.2s'
+      }}
+    >
+      <div style={{
+        width: '20px',
+        height: '20px',
+        borderRadius: '10px',
+        background: 'white',
+        position: 'absolute',
+        top: '2px',
+        left: checked ? '22px' : '2px',
+        transition: 'left 0.2s'
+      }} />
+    </button>
+  )
+
+  // Settings row component
+  const SettingsRow = ({ title, description, children }: { title: string; description: string; children: React.ReactNode }) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 0', borderBottom: '1px solid #f0f0f0' }}>
+      <div>
+        <div style={{ fontSize: '16px', fontWeight: '500', color: '#1a1a1a', marginBottom: '4px' }}>{title}</div>
+        <div style={{ fontSize: '14px', color: '#999' }}>{description}</div>
+      </div>
+      {children}
+    </div>
+  )
+
+  if (showSettings) {
+    return (
+      <div style={{ width: '100%', height: '100vh', background: 'white', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+        {/* Drag region */}
+        <div style={{ WebkitAppRegion: 'drag', height: '52px', background: 'white', position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000 } as any} />
+        
+        {/* Settings content */}
+        <div style={{ flex: 1, padding: '100px 120px 100px 120px', overflowY: 'auto' }}>
+          {settingsTab === 'general' && (
+            <>
+              <h1 style={{ fontSize: '32px', fontWeight: '600', color: '#1a1a1a', margin: '0 0 40px 0' }}>General</h1>
+              
+              <div>
+                <SettingsRow title="Sound Effects" description="Play audio feedback for recording and typing">
+                  <Toggle checked={soundEffects} onChange={setSoundEffects} />
+                </SettingsRow>
+
+                <SettingsRow title="Auto-Mute System" description="Mute system volume during recording">
+                  <Toggle checked={autoMute} onChange={setAutoMute} />
+                </SettingsRow>
+
+                <SettingsRow title="Dark Mode" description="Use dark theme for the interface">
+                  <Toggle checked={darkMode} onChange={setDarkMode} />
+                </SettingsRow>
+
+                <SettingsRow title="API Key" description="Configure your Groq API key">
+                  <button style={{
+                    padding: '8px 24px',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '6px',
+                    background: 'white',
+                    color: '#1a1a1a',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                    Set Key
+                  </button>
+                </SettingsRow>
+
+                <SettingsRow title="Input Device" description="Select microphone for recording">
+                  <button style={{
+                    padding: '8px 24px',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '6px',
+                    background: 'white',
+                    color: '#1a1a1a',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                    Select Device
+                  </button>
+                </SettingsRow>
+
+                <SettingsRow title="Data Location" description="Access your app data and recordings">
+                  <button style={{
+                    padding: '8px 24px',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '6px',
+                    background: 'white',
+                    color: '#1a1a1a',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                    Open Folder
+                  </button>
+                </SettingsRow>
+
+                <SettingsRow title="App Updates" description="Check for the latest version">
+                  <button style={{
+                    padding: '8px 24px',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '6px',
+                    background: 'white',
+                    color: '#1a1a1a',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                    Check Updates
+                  </button>
+                </SettingsRow>
+              </div>
+            </>
+          )}
+
+          {settingsTab === 'transcription' && (
+            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+              <h2 style={{ fontSize: '24px', color: '#666' }}>Transcription Settings</h2>
+            </div>
+          )}
+
+          {settingsTab === 'assistant' && (
+            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+              <h2 style={{ fontSize: '24px', color: '#666' }}>Assistant Settings</h2>
+            </div>
+          )}
+
+          {settingsTab === 'output' && (
+            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+              <h2 style={{ fontSize: '24px', color: '#666' }}>Output Settings</h2>
+            </div>
+          )}
+        </div>
+        
+        {/* Bottom navigation */}
+        <div style={{ position: 'absolute', bottom: '32px', left: '32px', right: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {/* Back button */}
+            <button onClick={() => setShowSettings(false)} style={{ background: 'white', border: '1px solid #e0e0e0', borderRadius: '8px', width: '40px', height: '40px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'white'} title="Back">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+            </button>
+            
+            {/* Settings tab - General */}
+            <button onClick={() => setSettingsTab('general')} style={{ background: settingsTab === 'general' ? '#f0f0f0' : 'transparent', border: 'none', borderRadius: '8px', width: '40px', height: '40px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} title="General">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={settingsTab === 'general' ? '#1a1a1a' : '#999'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3"></path>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+            </button>
+            
+            {/* Transcription tab */}
+            <button onClick={() => setSettingsTab('transcription')} style={{ background: settingsTab === 'transcription' ? '#f0f0f0' : 'transparent', border: 'none', borderRadius: '8px', width: '40px', height: '40px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} title="Transcription">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={settingsTab === 'transcription' ? '#1a1a1a' : '#999'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            </button>
+            
+            {/* Assistant tab */}
+            <button onClick={() => setSettingsTab('assistant')} style={{ background: settingsTab === 'assistant' ? '#f0f0f0' : 'transparent', border: 'none', borderRadius: '8px', width: '40px', height: '40px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} title="Assistant">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={settingsTab === 'assistant' ? '#1a1a1a' : '#999'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+            </button>
+            
+            {/* Output tab */}
+            <button onClick={() => setSettingsTab('output')} style={{ background: settingsTab === 'output' ? '#f0f0f0' : 'transparent', border: 'none', borderRadius: '8px', width: '40px', height: '40px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} title="Output">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={settingsTab === 'output' ? '#1a1a1a' : '#999'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="9" y1="3" x2="9" y2="21"></line>
+              </svg>
+            </button>
+          </div>
+          
+          {/* Info button - bottom right */}
+          <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.6, transition: 'opacity 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.opacity = '1'} onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'} title="Info">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -99,7 +319,7 @@ function MainWindow() {
       {/* Bottom buttons */}
       <div style={{ position: 'absolute', bottom: '32px', left: '32px', right: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         {/* Settings button - bottom left */}
-        <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.6, transition: 'opacity 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.opacity = '1'} onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'} title="Settings">
+        <button onClick={() => setShowSettings(true)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.6, transition: 'opacity 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.opacity = '1'} onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'} title="Settings">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M12 1v6m0 6v6m9-9h-6m-6 0H3"></path>
