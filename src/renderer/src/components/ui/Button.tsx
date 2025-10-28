@@ -28,7 +28,7 @@ export function Button({ onClick, children, variant = 'secondary', title, active
       borderRadius: '6px',
       background: isHovered ? theme.buttonHover : theme.buttonBg,
       color: theme.text,
-      fontSize: '14px',
+      fontSize: '12px',
       fontWeight: '500',
     },
     secondary: {
@@ -38,7 +38,7 @@ export function Button({ onClick, children, variant = 'secondary', title, active
       borderRadius: '6px',
       background: isHovered ? theme.buttonHover : theme.buttonBg,
       color: theme.text,
-      fontSize: '14px',
+      fontSize: '12px',
       fontWeight: '500',
     },
     icon: {

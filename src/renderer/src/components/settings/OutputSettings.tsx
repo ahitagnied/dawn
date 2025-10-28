@@ -13,10 +13,6 @@ interface OutputSettingsProps {
 export function OutputSettings({ settings, onUpdateSetting, theme }: OutputSettingsProps) {
   return (
     <>
-      <h1 style={{ fontSize: '32px', fontWeight: '600', color: theme.text, margin: '0 0 40px 0' }}>
-        Output
-      </h1>
-      
       <div>
         <SettingsRow title="Auto Copy" description="Copy transcriptions to clipboard automatically" theme={theme}>
           <Toggle checked={settings.autoCopy} onChange={(val) => onUpdateSetting('autoCopy', val)} theme={theme} />

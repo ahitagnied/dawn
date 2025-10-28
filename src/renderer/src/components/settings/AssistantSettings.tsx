@@ -13,10 +13,6 @@ interface AssistantSettingsProps {
 export function AssistantSettings({ settings, onUpdateSetting, theme }: AssistantSettingsProps) {
   return (
     <>
-      <h1 style={{ fontSize: '32px', fontWeight: '600', color: theme.text, margin: '0 0 40px 0' }}>
-        Assistant
-      </h1>
-      
       <div>
         <SettingsRow title="Assistant Hotkey" description="Keyboard shortcut to activate AI assistant" theme={theme}>
           <Button theme={theme}>Option ⌥ + Shift ⇧ + S</Button>

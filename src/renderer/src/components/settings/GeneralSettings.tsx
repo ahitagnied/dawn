@@ -21,10 +21,6 @@ export function GeneralSettings({ settings, onUpdateSetting, theme }: GeneralSet
 
   return (
     <>
-      <h1 style={{ fontSize: '32px', fontWeight: '600', color: theme.text, margin: '0 0 40px 0' }}>
-        General
-      </h1>
-      
       <div>
         <SettingsRow title="Sound Effects" description="Play audio feedback for recording and typing" theme={theme}>
           <Toggle checked={settings.soundEffects} onChange={(val) => onUpdateSetting('soundEffects', val)} theme={theme} />
