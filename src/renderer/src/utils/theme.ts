@@ -12,27 +12,27 @@ export interface Theme {
 }
 
 export const lightTheme: Theme = {
-  background: '#ffffff',
-  surface: '#f5f5f5',
-  text: '#1a1a1a',
-  textSecondary: '#666666',
-  border: '#e0e0e0',
-  buttonBg: '#f5f5f5',
-  buttonHover: '#e8e8e8',
-  toggleBg: '#e0e0e0',
+  background: 'rgba(255, 255, 255, 0.5)',
+  surface: 'rgba(69, 69, 69, 0.25)',
+  text: '#000000',
+  textSecondary: '#333333',
+  border: 'rgba(0, 0, 0, 0.15)',
+  buttonBg: 'rgba(244, 244, 244, 0.2)',
+  buttonHover: 'rgba(235, 235, 245, 0.35)',
+  toggleBg: 'rgba(200, 200, 210, 0.6)',
   toggleBgActive: '#1a1a1a',
   toggleThumb: '#ffffff',
 }
 
 export const darkTheme: Theme = {
-  background: '#1a1a1a',
-  surface: '#2a2a2a',
+  background: 'rgba(20, 20, 22, 0.15)',
+  surface: 'rgba(39, 39, 40, 0.25)',
   text: '#ffffff',
-  textSecondary: '#999999',
-  border: '#3a3a3a',
-  buttonBg: '#2a2a2a',
-  buttonHover: '#3a3a3a',
-  toggleBg: '#3a3a3a',
+  textSecondary: '#b0b0b0',
+  border: 'rgba(255, 255, 255, 0.2)',
+  buttonBg: 'rgba(45, 45, 50, 0.2)',
+  buttonHover: 'rgba(55, 55, 60, 0.35)',
+  toggleBg: 'rgba(70, 70, 80, 0.6)',
   toggleBgActive: '#ffffff',
   toggleThumb: '#1a1a1a',
 }

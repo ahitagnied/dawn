@@ -60,6 +60,7 @@ function createMainWindow(): void {
     titleBarStyle: 'hidden',
     trafficLightPosition: { x: 20, y: 20 },
     transparent: false,
+    vibrancy: 'under-window',
     resizable: true,
     focusable: true,
     alwaysOnTop: false,

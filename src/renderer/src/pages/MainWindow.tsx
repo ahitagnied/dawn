@@ -66,6 +66,7 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
       width: '100%', 
       height: '100vh', 
       background: theme.background, 
+      backdropFilter: 'blur(8px)',
       fontFamily: 'Calibri, sans-serif', 
       display: 'flex', 
       flexDirection: 'column', 
@@ -74,7 +75,6 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
       <div style={{ 
         WebkitAppRegion: 'drag', 
         height: '52px', 
-        background: theme.background, 
         position: 'absolute', 
         top: 0, 
         left: 0, 
@@ -171,6 +171,7 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
             style={{ 
               flex: 1,
               background: theme.surface,
+              backdropFilter: 'blur(8px)',
               border: `1px solid ${theme.border}`,
               borderTopLeftRadius: '12px',
               borderTopRightRadius: '12px',
@@ -216,6 +217,7 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
                         gap: '16px',
                         padding: '16px 20px',
                         background: theme.surface,
+                        backdropFilter: 'blur(8px)',
                         alignItems: 'center'
                       }}>
                         <div style={{
