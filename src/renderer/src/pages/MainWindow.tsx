@@ -163,7 +163,6 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
               fontWeight: 'normal',
               color: theme.textSecondary,
               letterSpacing: '0.5px',
-              background: theme.background
             }}>
               {currentDateLabel}
             </div>
