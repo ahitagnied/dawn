@@ -4,7 +4,7 @@ import { GeneralSettings } from '../components/settings/GeneralSettings'
 import { TranscriptionSettings } from '../components/settings/TranscriptionSettings'
 import { AssistantSettings } from '../components/settings/AssistantSettings'
 import { OutputSettings } from '../components/settings/OutputSettings'
-import { BackIcon, SettingsIcon, MicrophoneIcon, DocumentIcon, OutputIcon, InfoIcon } from '../components/icons'
+import { BackIcon, SettingsIcon, MicrophoneIcon, DocumentIcon, OutputIcon } from '../components/icons'
 import { Button } from '../components/ui/Button'
 import { getTheme } from '../utils/theme'
 
@@ -69,106 +69,78 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         position: 'absolute', 
         bottom: '32px', 
         left: '32px', 
-        right: '32px', 
         display: 'flex', 
-        justifyContent: 'space-between', 
+        gap: '12px', 
         alignItems: 'center' 
       }}>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          {/* Back button */}
-          <Button 
-            onClick={onBack} 
-            variant="icon"
-            style={{ 
-              border: `1px solid ${theme.border}`, 
-              background: theme.background 
-            }}
-            title="Back"
-          >
-            <BackIcon color={theme.text} />
-          </Button>
-          
-          {/* Settings tab - General */}
-          <Button 
-            onClick={() => setSettingsTab('general')} 
-            variant="icon"
-            active={settingsTab === 'general'}
-            title="General"
-            style={{
-              background: settingsTab === 'general' ? theme.surface : 'transparent'
-            }}
-          >
-            <SettingsIcon 
-              color={settingsTab === 'general' ? theme.text : theme.textSecondary} 
-              size={20} 
-            />
-          </Button>
-          
-          {/* Transcription tab */}
-          <Button 
-            onClick={() => setSettingsTab('transcription')} 
-            variant="icon"
-            active={settingsTab === 'transcription'}
-            title="Transcription"
-            style={{
-              background: settingsTab === 'transcription' ? theme.surface : 'transparent'
-            }}
-          >
-            <MicrophoneIcon 
-              color={settingsTab === 'transcription' ? theme.text : theme.textSecondary} 
-            />
-          </Button>
-          
-          {/* Assistant tab */}
-          <Button 
-            onClick={() => setSettingsTab('assistant')} 
-            variant="icon"
-            active={settingsTab === 'assistant'}
-            title="Assistant"
-            style={{
-              background: settingsTab === 'assistant' ? theme.surface : 'transparent'
-            }}
-          >
-            <DocumentIcon 
-              color={settingsTab === 'assistant' ? theme.text : theme.textSecondary} 
-            />
-          </Button>
-          
-          {/* Output tab */}
-          <Button 
-            onClick={() => setSettingsTab('output')} 
-            variant="icon"
-            active={settingsTab === 'output'}
-            title="Output"
-            style={{
-              background: settingsTab === 'output' ? theme.surface : 'transparent'
-            }}
-          >
-            <OutputIcon 
-              color={settingsTab === 'output' ? theme.text : theme.textSecondary} 
-            />
-          </Button>
-        </div>
-        
-        {/* Info button - bottom right */}
-        <button 
+        <Button 
+          onClick={onBack} 
+          variant="icon"
           style={{ 
-            background: 'transparent', 
-            border: 'none', 
-            cursor: 'pointer', 
-            padding: '8px', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            opacity: 0.6, 
-            transition: 'opacity 0.2s' 
-          }} 
-          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'} 
-          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'} 
-          title="Info"
+            border: `1px solid ${theme.border}`, 
+            background: theme.background 
+          }}
+          title="Back"
         >
-          <InfoIcon color={theme.textSecondary} />
-        </button>
+          <BackIcon color={theme.text} />
+        </Button>
+        
+        <Button 
+          onClick={() => setSettingsTab('general')} 
+          variant="icon"
+          active={settingsTab === 'general'}
+          title="General"
+          style={{
+            background: settingsTab === 'general' ? theme.surface : 'transparent'
+          }}
+        >
+          <SettingsIcon 
+            color={settingsTab === 'general' ? theme.text : theme.textSecondary} 
+            size={20} 
+          />
+        </Button>
+        
+        <Button 
+          onClick={() => setSettingsTab('transcription')} 
+          variant="icon"
+          active={settingsTab === 'transcription'}
+          title="Transcription"
+          style={{
+            background: settingsTab === 'transcription' ? theme.surface : 'transparent'
+          }}
+        >
+          <MicrophoneIcon 
+            color={settingsTab === 'transcription' ? theme.text : theme.textSecondary} 
+          />
+        </Button>
+        
+        <Button 
+          onClick={() => setSettingsTab('assistant')} 
+          variant="icon"
+          active={settingsTab === 'assistant'}
+          title="Assistant"
+          style={{
+            background: settingsTab === 'assistant' ? theme.surface : 'transparent'
+          }}
+        >
+          <DocumentIcon 
+            color={settingsTab === 'assistant' ? theme.text : theme.textSecondary} 
+          />
+        </Button>
+        
+        <Button 
+          onClick={() => setSettingsTab('output')} 
+          variant="icon"
+          active={settingsTab === 'output'}
+          title="Output"
+          style={{
+            background: settingsTab === 'output' ? theme.surface : 'transparent'
+          }}
+        >
+          <OutputIcon 
+            color={settingsTab === 'output' ? theme.text : theme.textSecondary} 
+          />
+        </Button>
       </div>
     </div>
   )

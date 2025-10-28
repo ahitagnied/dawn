@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useTranscriptions } from '../hooks/useTranscriptions'
 import { useSettings } from '../hooks/useSettings'
-import { SettingsIcon, InfoIcon, CopyIcon } from '../components/icons'
+import { SettingsIcon, CopyIcon } from '../components/icons'
 import { getTheme } from '../utils/theme'
 
 interface MainWindowProps {
@@ -278,10 +278,7 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
       <div style={{ 
         position: 'absolute', 
         bottom: '32px', 
-        left: '32px', 
-        right: '32px', 
-        display: 'flex', 
-        justifyContent: 'space-between'
+        left: '32px'
       }}>
         <button 
           onClick={onOpenSettings} 
@@ -297,21 +294,6 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
           onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
         >
           <SettingsIcon color={theme.textSecondary} />
-        </button>
-        
-        <button 
-          style={{ 
-            background: 'transparent', 
-            border: 'none', 
-            cursor: 'pointer', 
-            padding: '8px', 
-            opacity: 0.6, 
-            transition: 'opacity 0.2s' 
-          }} 
-          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'} 
-          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
-        >
-          <InfoIcon color={theme.textSecondary} />
         </button>
       </div>
     </div>
