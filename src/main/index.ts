@@ -122,15 +122,14 @@ app.whenReady().then(() => {
   let recording = false
   let previousVolume = 0
   let autoMuteEnabled = true
-  let currentHotkeyGroups: number[][] = [[56, 3640]] // Default: Alt/Option key (single group)
-  let pressedKeys = new Set<number>() // Track all currently pressed keys
+  let currentHotkeyGroups: number[][] = [[56, 3640]]
+  let pressedKeys = new Set<number>()
 
-  // Key mapping for hotkey parsing
   const KEY_TO_KEYCODE: Record<string, number[]> = {
-    'Cmd ⌘': [3675, 3676], // Left and Right Command
-    'Ctrl ⌃': [29, 3613], // Left and Right Control
-    'Option ⌥': [56, 3640], // Left and Right Alt/Option
-    'Shift ⇧': [42, 54], // Left and Right Shift
+    'Cmd ⌘': [3675, 3676],
+    'Ctrl ⌃': [29, 3613],
+    'Option ⌥': [56, 3640],
+    'Shift ⇧': [42, 54],
     'Space ␣': [57],
     'Return ↵': [28],
     'Esc ⎋': [1],
@@ -142,11 +141,9 @@ app.whenReady().then(() => {
     '→': [205],
   }
 
-  // Add alphanumeric keys (A-Z)
-  const ALPHA_START = 65 // 'A' charCode
+  const ALPHA_START = 65
   for (let i = 0; i < 26; i++) {
     const letter = String.fromCharCode(ALPHA_START + i)
-    // uIOhook key codes for A-Z are 30-44, 16-25, 44-50
     const keyCodes: Record<string, number> = {
       'A': 30, 'B': 48, 'C': 46, 'D': 32, 'E': 18, 'F': 33, 'G': 34, 'H': 35,
       'I': 23, 'J': 36, 'K': 37, 'L': 38, 'M': 50, 'N': 49, 'O': 24, 'P': 25,
@@ -156,7 +153,6 @@ app.whenReady().then(() => {
     KEY_TO_KEYCODE[letter] = [keyCodes[letter]]
   }
 
-  // Parse hotkey string to key code groups (each group represents one key in the combination)
   const parseHotkeyToKeyGroups = (hotkey: string): number[][] => {
     const keys = hotkey.split(' + ').map(k => k.trim())
     const keyGroups: number[][] = []
@@ -167,16 +163,12 @@ app.whenReady().then(() => {
       }
     }
     
-    return keyGroups.length > 0 ? keyGroups : [[56, 3640]] // Default to Alt/Option if parsing fails
+    return keyGroups.length > 0 ? keyGroups : [[56, 3640]]
   }
 
-  // Check if all required keys are pressed (AND operation across groups)
   const areAllKeysPressed = (keyGroups: number[][], pressedKeys: Set<number>): boolean => {
-    // For each key group, at least one key from that group must be pressed
     return keyGroups.every(group => group.some(keycode => pressedKeys.has(keycode)))
   }
-
-  // Helper functions for volume control on macOS
   const getMacVolume = async (): Promise<number> => {
     return new Promise((resolve, reject) => {
       execFile('osascript', ['-e', 'output volume of (get volume settings)'], (err, stdout) => {
@@ -195,61 +187,54 @@ app.whenReady().then(() => {
     })
   }
 
-  // IPC handler for auto-mute setting
   ipcMain.handle('settings:update-auto-mute', async (_evt, enabled: boolean) => {
     autoMuteEnabled = enabled
   })
 
-  // IPC handler for hotkey update
   ipcMain.handle('settings:update-hotkey', async (_evt, hotkey: string) => {
     currentHotkeyGroups = parseHotkeyToKeyGroups(hotkey)
     console.log('Updated hotkey groups:', currentHotkeyGroups)
   })
 
   uIOhook.on('keydown', async (e) => {
-    // Add the pressed key to our tracking set
     pressedKeys.add(e.keycode)
     
-    // Check if all required keys are now pressed and we're not already recording
     if (!recording && areAllKeysPressed(currentHotkeyGroups, pressedKeys)) {
       recording = true
-      
-      // Auto-mute if enabled
-      if (autoMuteEnabled && process.platform === 'darwin') {
-        try {
-          previousVolume = await getMacVolume()
-          await setMacVolume(0)
-        } catch (error) {
-          console.error('Failed to mute system volume:', error)
-        }
-      }
       
       BrowserWindow.getAllWindows().forEach(window => {
         window.webContents.send('record:start')
       })
+      
+      if (autoMuteEnabled && process.platform === 'darwin') {
+        getMacVolume()
+          .then(volume => {
+            previousVolume = volume
+            return setMacVolume(0)
+          })
+          .catch(error => {
+            console.error('Failed to mute system volume:', error)
+          })
+      }
     }
   })
 
   uIOhook.on('keyup', async (e) => {
-    // Remove the released key from our tracking set
     pressedKeys.delete(e.keycode)
     
-    // If we're recording and any of the required keys was released, stop recording
     if (recording && !areAllKeysPressed(currentHotkeyGroups, pressedKeys)) {
       recording = false
-      
-      // Restore volume if auto-mute was enabled
-      if (autoMuteEnabled && process.platform === 'darwin') {
-        try {
-          await setMacVolume(previousVolume)
-        } catch (error) {
-          console.error('Failed to restore system volume:', error)
-        }
-      }
       
       BrowserWindow.getAllWindows().forEach(window => {
         window.webContents.send('record:stop')
       })
+      
+      if (autoMuteEnabled && process.platform === 'darwin') {
+        setMacVolume(previousVolume)
+          .catch(error => {
+            console.error('Failed to restore system volume:', error)
+          })
+      }
     }
   })
 
