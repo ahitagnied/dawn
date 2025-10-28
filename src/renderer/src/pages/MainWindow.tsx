@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranscriptions } from '../hooks/useTranscriptions'
 import { useSettings } from '../hooks/useSettings'
-import { SettingsIcon, InfoIcon } from '../components/icons'
+import { SettingsIcon, InfoIcon, CopyIcon } from '../components/icons'
 import { getTheme } from '../utils/theme'
 
 interface MainWindowProps {
@@ -199,10 +199,11 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
                       display: 'flex',
                       gap: '16px',
                       padding: '16px 20px',
-                      background: theme.surface
+                      background: theme.surface,
+                      alignItems: 'center'
                     }}>
                       <div style={{
-                        fontSize: '11px',
+                        fontSize: '12px',
                         color: theme.textSecondary,
                         minWidth: '70px',
                         flexShrink: 0
@@ -221,12 +222,31 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
                       }}>
                         {transcription.text}
                       </div>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(transcription.text)
+                        }}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          opacity: 0.4,
+                          transition: 'opacity 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.4'}
+                      >
+                        <CopyIcon color={theme.textSecondary} size={16} />
+                      </button>
                     </div>
                     {(index < items.length - 1 || groupIndex < Object.entries(groupedTranscriptions).length - 1) && (
                       <div style={{ 
                         height: '1px', 
-                        background: theme.border,
-                        marginLeft: '106px'
+                        background: theme.border
                       }} />
                     )}
                   </div>
