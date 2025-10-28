@@ -70,8 +70,9 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         bottom: '32px', 
         left: '32px', 
         display: 'flex', 
+        flexDirection: 'column-reverse',
         gap: '12px', 
-        alignItems: 'center' 
+        alignItems: 'flex-start' 
       }}>
         <Button 
           onClick={onBack} 
@@ -86,31 +87,16 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         </Button>
         
         <Button 
-          onClick={() => setSettingsTab('general')} 
+          onClick={() => setSettingsTab('output')} 
           variant="icon"
-          active={settingsTab === 'general'}
-          title="General"
+          active={settingsTab === 'output'}
+          title="Output"
           style={{
-            background: settingsTab === 'general' ? theme.surface : 'transparent'
+            background: settingsTab === 'output' ? theme.surface : 'transparent'
           }}
         >
-          <SettingsIcon 
-            color={settingsTab === 'general' ? theme.text : theme.textSecondary} 
-            size={20} 
-          />
-        </Button>
-        
-        <Button 
-          onClick={() => setSettingsTab('transcription')} 
-          variant="icon"
-          active={settingsTab === 'transcription'}
-          title="Transcription"
-          style={{
-            background: settingsTab === 'transcription' ? theme.surface : 'transparent'
-          }}
-        >
-          <MicrophoneIcon 
-            color={settingsTab === 'transcription' ? theme.text : theme.textSecondary} 
+          <OutputIcon 
+            color={settingsTab === 'output' ? theme.text : theme.textSecondary} 
           />
         </Button>
         
@@ -129,20 +115,34 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         </Button>
         
         <Button 
-          onClick={() => setSettingsTab('output')} 
+          onClick={() => setSettingsTab('transcription')} 
           variant="icon"
-          active={settingsTab === 'output'}
-          title="Output"
+          active={settingsTab === 'transcription'}
+          title="Transcription"
           style={{
-            background: settingsTab === 'output' ? theme.surface : 'transparent'
+            background: settingsTab === 'transcription' ? theme.surface : 'transparent'
           }}
         >
-          <OutputIcon 
-            color={settingsTab === 'output' ? theme.text : theme.textSecondary} 
+          <MicrophoneIcon 
+            color={settingsTab === 'transcription' ? theme.text : theme.textSecondary} 
+          />
+        </Button>
+        
+        <Button 
+          onClick={() => setSettingsTab('general')} 
+          variant="icon"
+          active={settingsTab === 'general'}
+          title="General"
+          style={{
+            background: settingsTab === 'general' ? theme.surface : 'transparent'
+          }}
+        >
+          <SettingsIcon 
+            color={settingsTab === 'general' ? theme.text : theme.textSecondary} 
+            size={20} 
           />
         </Button>
       </div>
     </div>
   )
 }
-
