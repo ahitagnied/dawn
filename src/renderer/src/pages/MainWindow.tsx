@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTranscriptions } from '../hooks/useTranscriptions'
 import { useSettings } from '../hooks/useSettings'
 import { SettingsIcon, InfoIcon, CopyIcon } from '../components/icons'
@@ -12,8 +12,6 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
   const { transcriptions } = useTranscriptions()
   const { settings } = useSettings()
   const theme = getTheme(settings.darkMode)
-  const [currentDateLabel, setCurrentDateLabel] = useState<string>('')
-  const scrollRef = useRef<HTMLDivElement>(null)
 
   const wordsIn = transcriptions.reduce((sum, t) => sum + t.wordCount, 0)
   const wordsOut = transcriptions.reduce((sum, t) => sum + t.wordCount, 0)
@@ -42,21 +40,26 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
     }
   }
 
-  const groupedTranscriptions = transcriptions.reduce((groups, transcription) => {
-    const dateLabel = getDateLabel(transcription.timestamp)
-    if (!groups[dateLabel]) {
-      groups[dateLabel] = []
+  const groups = useMemo(() => {
+    const sorted = [...transcriptions].sort((a, b) => b.timestamp - a.timestamp)
+
+    const byLabel: Record<string, typeof transcriptions> = {}
+    for (const t of sorted) {
+      const label = getDateLabel(t.timestamp)
+      ;(byLabel[label] ||= []).push(t)
     }
-    groups[dateLabel].push(transcription)
-    return groups
-  }, {} as Record<string, typeof transcriptions>)
+    return byLabel
+  }, [transcriptions])
+
+  const groupLabels = useMemo(() => Object.keys(groups), [groups])
+
+  const [currentDateLabel, setCurrentDateLabel] = useState<string>(() => groupLabels[0] ?? '')
 
   useEffect(() => {
-    const firstDate = Object.keys(groupedTranscriptions)[0]
-    if (firstDate) {
-      setCurrentDateLabel(firstDate)
+    if (!currentDateLabel && groupLabels[0]) {
+      setCurrentDateLabel(groupLabels[0])
     }
-  }, [groupedTranscriptions])
+  }, [groupLabels, currentDateLabel])
 
   return (
     <div style={{ 
@@ -166,7 +169,6 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
             </div>
           )}
           <div 
-            ref={scrollRef}
             style={{ 
               flex: 1,
               background: theme.surface,
@@ -179,80 +181,96 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
             }}
             onScroll={(e) => {
               const container = e.currentTarget
-              const sections = container.querySelectorAll('[data-date-section]')
-              
-              for (let i = sections.length - 1; i >= 0; i--) {
-                const section = sections[i] as HTMLElement
-                if (section.offsetTop <= container.scrollTop + 10) {
-                  const label = section.getAttribute('data-date-section')
-                  if (label) setCurrentDateLabel(label)
-                  break
-                }
+              const containerTop = container.getBoundingClientRect().top
+
+              const sections = Array.from(
+                container.querySelectorAll<HTMLElement>('[data-date-section]')
+              )
+
+              const STICKY_MARGIN = 8
+              const candidates = sections
+                .map((el) => ({
+                  el,
+                  topWithin: el.getBoundingClientRect().top - containerTop
+                }))
+                .filter((x) => x.topWithin <= STICKY_MARGIN)
+                .sort((a, b) => b.topWithin - a.topWithin)
+
+              const next =
+                (candidates[0]?.el.getAttribute('data-date-section')) ||
+                sections[0]?.getAttribute('data-date-section') ||
+                ''
+
+              if (next && next !== currentDateLabel) {
+                setCurrentDateLabel(next)
               }
             }}
           >
-            {Object.entries(groupedTranscriptions).map(([dateLabel, items], groupIndex) => (
-              <div key={dateLabel} data-date-section={dateLabel}>
-                {items.map((transcription, index) => (
-                  <div key={transcription.id}>
-                    <div style={{ 
-                      display: 'flex',
-                      gap: '16px',
-                      padding: '16px 20px',
-                      background: theme.surface,
-                      alignItems: 'center'
-                    }}>
-                      <div style={{
-                        fontSize: '12px',
-                        color: theme.textSecondary,
-                        minWidth: '70px',
-                        flexShrink: 0
-                      }}>
-                        {new Date(transcription.timestamp).toLocaleTimeString('en-US', { 
-                          hour: '2-digit', 
-                          minute: '2-digit',
-                          hour12: true 
-                        })}
-                      </div>
+            {groupLabels.map((dateLabel, groupIndex) => {
+              const items = groups[dateLabel]
+              return (
+                <div key={dateLabel} data-date-section={dateLabel}>
+                  {items.map((transcription, index) => (
+                    <div key={transcription.id}>
                       <div style={{ 
-                        flex: 1,
-                        fontSize: '14px', 
-                        color: theme.text,
-                        lineHeight: '1.5'
+                        display: 'flex',
+                        gap: '16px',
+                        padding: '16px 20px',
+                        background: theme.surface,
+                        alignItems: 'center'
                       }}>
-                        {transcription.text}
+                        <div style={{
+                          fontSize: '12px',
+                          color: theme.textSecondary,
+                          minWidth: '70px',
+                          flexShrink: 0
+                        }}>
+                          {new Date(transcription.timestamp).toLocaleTimeString('en-US', { 
+                            hour: '2-digit', 
+                            minute: '2-digit',
+                            hour12: true 
+                          })}
+                        </div>
+                        <div style={{ 
+                          flex: 1,
+                          fontSize: '14px', 
+                          color: theme.text,
+                          lineHeight: '1.5'
+                        }}>
+                          {transcription.text}
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(transcription.text)
+                          }}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            opacity: 0.4,
+                            transition: 'opacity 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+                          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.4'}
+                        >
+                          <CopyIcon color={theme.textSecondary} size={16} />
+                        </button>
                       </div>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(transcription.text)
-                        }}
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          cursor: 'pointer',
-                          padding: '4px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          opacity: 0.4,
-                          transition: 'opacity 0.2s'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
-                        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.4'}
-                      >
-                        <CopyIcon color={theme.textSecondary} size={16} />
-                      </button>
+                      {(index < items.length - 1 || groupIndex < groupLabels.length - 1) && (
+                        <div style={{ 
+                          height: '1px', 
+                          background: theme.border
+                        }} />
+                      )}
                     </div>
-                    {(index < items.length - 1 || groupIndex < Object.entries(groupedTranscriptions).length - 1) && (
-                      <div style={{ 
-                        height: '1px', 
-                        background: theme.border
-                      }} />
-                    )}
-                  </div>
-                ))}
-              </div>
-            ))}
+                  ))}
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
