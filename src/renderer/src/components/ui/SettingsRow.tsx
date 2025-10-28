@@ -18,10 +18,10 @@ export function SettingsRow({ title, description, children, theme = lightTheme }
       borderBottom: `1px solid ${theme.border}` 
     }}>
       <div>
-        <div style={{ fontSize: '16px', fontWeight: '500', color: theme.text, marginBottom: '4px' }}>
+        <div style={{ fontSize: '14px', fontWeight: '500', color: theme.text, marginBottom: '6px' }}>
           {title}
         </div>
-        <div style={{ fontSize: '14px', color: theme.textSecondary }}>
+        <div style={{ fontSize: '12px', color: theme.textSecondary }}>
           {description}
         </div>
       </div>
