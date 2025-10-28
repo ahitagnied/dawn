@@ -17,10 +17,6 @@ export function TranscriptionSettings({ settings, onUpdateSetting, theme }: Tran
 
   return (
     <>
-      <h1 style={{ fontSize: '32px', fontWeight: '600', color: theme.text, margin: '0 0 40px 0' }}>
-        Transcription
-      </h1>
-      
       <div>
         <SettingsRow title="Transcription Hotkey" description="Keyboard shortcut to start transcription" theme={theme}>
           <Button theme={theme}>Option ⌥ + Shift ⇧ + Z</Button>

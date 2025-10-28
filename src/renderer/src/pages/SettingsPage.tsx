@@ -44,7 +44,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
       {/* Settings content */}
       <div style={{ 
         flex: 1, 
-        padding: '100px 120px 100px 120px', 
+        padding: '60px 120px 100px 120px', 
         overflowY: 'auto' 
       }}>
         {settingsTab === 'general' && (
