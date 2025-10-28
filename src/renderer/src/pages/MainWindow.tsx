@@ -48,8 +48,9 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
       <div style={{ 
         flex: 1, 
         display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center'
+        paddingTop: '100px',
+        justifyContent: 'center',
+        alignItems: 'flex-start'
       }}>
         <div style={{ display: 'flex', gap: '35px', alignItems: 'center', width: '100%', justifyContent: 'center' }}>
           <div style={{ 
