@@ -27,6 +27,7 @@ export function Button({ onClick, children, variant = 'secondary', title, active
       border: `1px solid ${theme.border}`,
       borderRadius: '6px',
       background: isHovered ? theme.buttonHover : theme.buttonBg,
+      backdropFilter: 'blur(8px)',
       color: theme.text,
       fontSize: '12px',
       fontWeight: '500',
@@ -37,6 +38,7 @@ export function Button({ onClick, children, variant = 'secondary', title, active
       border: `1px solid ${theme.border}`,
       borderRadius: '6px',
       background: isHovered ? theme.buttonHover : theme.buttonBg,
+      backdropFilter: 'blur(8px)',
       color: theme.text,
       fontSize: '12px',
       fontWeight: '500',
@@ -44,6 +46,7 @@ export function Button({ onClick, children, variant = 'secondary', title, active
     icon: {
       ...baseStyle,
       background: active ? theme.surface : 'transparent',
+      backdropFilter: active ? 'blur(8px)' : 'none',
       borderRadius: '8px',
       width: '40px',
       height: '40px',

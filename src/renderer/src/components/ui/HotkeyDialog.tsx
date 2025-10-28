@@ -144,10 +144,11 @@ export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = '
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 10000,
-      backdropFilter: 'blur(10px)',
+      backdropFilter: 'blur(6px)',
     }}>
       <div style={{
-        background: '#1a1a1a',
+        background: 'rgba(26, 26, 26, 0.9)',
+        backdropFilter: 'blur(8px)',
         borderRadius: '16px',
         padding: '48px',
         minWidth: '500px',
@@ -169,7 +170,8 @@ export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = '
         </h2>
 
         <div style={{
-          background: '#2a2a2a',
+          background: 'rgba(42, 42, 42, 0.5)',
+          backdropFilter: 'blur(8px)',
           borderRadius: '12px',
           padding: '24px 32px',
           minHeight: '80px',
@@ -178,7 +180,7 @@ export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = '
           justifyContent: 'center',
           gap: '12px',
           minWidth: '300px',
-          border: '2px solid #3a3a3a',
+          border: '2px solid rgba(58, 58, 58, 0.5)',
         }}>
           {displayKeys.length > 0 ? (
             <>
@@ -218,9 +220,10 @@ export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = '
             style={{
               flex: 1,
               padding: '12px 24px',
-              background: '#2a2a2a',
+              background: 'rgba(42, 42, 42, 0.5)',
+              backdropFilter: 'blur(8px)',
               color: 'white',
-              border: '1px solid #3a3a3a',
+              border: '1px solid rgba(58, 58, 58, 0.5)',
               borderRadius: '8px',
               fontSize: '15px',
               fontWeight: '500',
@@ -228,10 +231,10 @@ export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = '
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#3a3a3a'
+              e.currentTarget.style.background = 'rgba(58, 58, 58, 0.5)'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#2a2a2a'
+              e.currentTarget.style.background = 'rgba(42, 42, 42, 0.5)'
             }}
           >
             Cancel
@@ -242,7 +245,8 @@ export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = '
             style={{
               flex: 1,
               padding: '12px 24px',
-              background: displayKeys.length === 0 ? '#3a3a3a' : '#007AFF',
+              background: displayKeys.length === 0 ? 'rgba(58, 58, 58, 0.5)' : 'rgba(0, 122, 255, 0.8)',
+              backdropFilter: 'blur(8px)',
               color: displayKeys.length === 0 ? '#666' : 'white',
               border: 'none',
               borderRadius: '8px',
@@ -253,12 +257,12 @@ export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = '
             }}
             onMouseEnter={(e) => {
               if (displayKeys.length > 0) {
-                e.currentTarget.style.background = '#0056b3'
+                e.currentTarget.style.background = 'rgba(0, 86, 179, 0.8)'
               }
             }}
             onMouseLeave={(e) => {
               if (displayKeys.length > 0) {
-                e.currentTarget.style.background = '#007AFF'
+                e.currentTarget.style.background = 'rgba(0, 122, 255, 0.8)'
               }
             }}
           >

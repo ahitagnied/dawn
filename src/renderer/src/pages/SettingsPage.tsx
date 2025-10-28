@@ -24,6 +24,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
       width: '100%', 
       height: '100vh', 
       background: theme.background, 
+      backdropFilter: 'blur(8px)',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 
       display: 'flex', 
       flexDirection: 'column', 
@@ -33,7 +34,6 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
       <div style={{ 
         WebkitAppRegion: 'drag', 
         height: '52px', 
-        background: theme.background, 
         position: 'absolute', 
         top: 0, 
         left: 0, 
@@ -79,7 +79,8 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           variant="icon"
           style={{ 
             border: `1px solid ${theme.border}`, 
-            background: theme.background 
+            background: theme.background,
+            backdropFilter: 'blur(8px)'
           }}
           title="Back"
         >
@@ -92,7 +93,8 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           active={settingsTab === 'output'}
           title="Output"
           style={{
-            background: settingsTab === 'output' ? theme.surface : 'transparent'
+            background: settingsTab === 'output' ? theme.surface : 'transparent',
+            backdropFilter: settingsTab === 'output' ? 'blur(8px)' : 'none'
           }}
         >
           <OutputIcon 
@@ -106,7 +108,8 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           active={settingsTab === 'assistant'}
           title="Assistant"
           style={{
-            background: settingsTab === 'assistant' ? theme.surface : 'transparent'
+            background: settingsTab === 'assistant' ? theme.surface : 'transparent',
+            backdropFilter: settingsTab === 'assistant' ? 'blur(8px)' : 'none'
           }}
         >
           <DocumentIcon 
@@ -120,7 +123,8 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           active={settingsTab === 'transcription'}
           title="Transcription"
           style={{
-            background: settingsTab === 'transcription' ? theme.surface : 'transparent'
+            background: settingsTab === 'transcription' ? theme.surface : 'transparent',
+            backdropFilter: settingsTab === 'transcription' ? 'blur(8px)' : 'none'
           }}
         >
           <MicrophoneIcon 
@@ -134,7 +138,8 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           active={settingsTab === 'general'}
           title="General"
           style={{
-            background: settingsTab === 'general' ? theme.surface : 'transparent'
+            background: settingsTab === 'general' ? theme.surface : 'transparent',
+            backdropFilter: settingsTab === 'general' ? 'blur(8px)' : 'none'
           }}
         >
           <SettingsIcon 

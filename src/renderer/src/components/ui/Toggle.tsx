@@ -16,6 +16,7 @@ export function Toggle({ checked, onChange, theme = lightTheme }: ToggleProps) {
         borderRadius: '12px',
         border: 'none',
         background: checked ? theme.toggleBgActive : theme.toggleBg,
+        backdropFilter: checked ? 'none' : 'blur(8px)',
         position: 'relative',
         cursor: 'pointer',
         transition: 'background 0.2s'
@@ -26,6 +27,7 @@ export function Toggle({ checked, onChange, theme = lightTheme }: ToggleProps) {
         height: '20px',
         borderRadius: '10px',
         background: checked ? theme.toggleThumb : theme.background,
+        backdropFilter: checked ? 'none' : 'blur(8px)',
         position: 'absolute',
         top: '2px',
         left: checked ? '22px' : '2px',
