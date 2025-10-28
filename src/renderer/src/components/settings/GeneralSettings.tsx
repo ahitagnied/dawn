@@ -13,9 +13,15 @@ interface GeneralSettingsProps {
 export function GeneralSettings({ settings, onUpdateSetting, theme }: GeneralSettingsProps) {
   const handleAutoMuteChange = (val: boolean) => {
     onUpdateSetting('autoMute', val)
-    // Notify main process
     if (window.electron?.ipcRenderer) {
       window.electron.ipcRenderer.invoke('settings:update-auto-mute', val)
+    }
+  }
+
+  const handleSoundEffectsChange = (val: boolean) => {
+    onUpdateSetting('soundEffects', val)
+    if (window.electron?.ipcRenderer) {
+      window.electron.ipcRenderer.invoke('settings:update-sound-effects', val)
     }
   }
 
@@ -23,7 +29,7 @@ export function GeneralSettings({ settings, onUpdateSetting, theme }: GeneralSet
     <>
       <div>
         <SettingsRow title="Sound Effects" description="Play audio feedback for recording and typing" theme={theme}>
-          <Toggle checked={settings.soundEffects} onChange={(val) => onUpdateSetting('soundEffects', val)} theme={theme} />
+          <Toggle checked={settings.soundEffects} onChange={handleSoundEffectsChange} theme={theme} />
         </SettingsRow>
 
         <SettingsRow title="Auto-Mute System" description="Mute system volume during recording" theme={theme}>

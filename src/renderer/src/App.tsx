@@ -8,13 +8,16 @@ function MainApp() {
   const [showSettings, setShowSettings] = useState(false)
   const { settings } = useSettings()
 
-  // Initialize main process with current settings on startup
   useEffect(() => {
     if (window.bridge) {
       window.bridge.updatePushToTalkHotkey(settings.pushToTalkHotkey)
       window.bridge.updateAutoMute(settings.autoMute)
     }
-  }, []) // Only run on mount
+    
+    if (window.electron?.ipcRenderer) {
+      window.electron.ipcRenderer.invoke('settings:update-sound-effects', settings.soundEffects)
+    }
+  }, [])
 
   if (showSettings) {
     return <SettingsPage onBack={() => setShowSettings(false)} />

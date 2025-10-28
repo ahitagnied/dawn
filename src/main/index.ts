@@ -122,6 +122,7 @@ app.whenReady().then(() => {
   let recording = false
   let previousVolume = 0
   let autoMuteEnabled = true
+  let soundEffectsEnabled = false
   let currentHotkeyGroups: number[][] = [[56, 3640]]
   let pressedKeys = new Set<number>()
 
@@ -169,6 +170,13 @@ app.whenReady().then(() => {
   const areAllKeysPressed = (keyGroups: number[][], pressedKeys: Set<number>): boolean => {
     return keyGroups.every(group => group.some(keycode => pressedKeys.has(keycode)))
   }
+
+  const playSound = (soundFile: string, volume: number = 0.1): void => {
+    if (soundEffectsEnabled && process.platform === 'darwin') {
+      execFile('afplay', ['-v', volume.toString(), join(__dirname, '../../resources', soundFile)], () => {})
+    }
+  }
+
   const getMacVolume = async (): Promise<number> => {
     return new Promise((resolve, reject) => {
       execFile('osascript', ['-e', 'output volume of (get volume settings)'], (err, stdout) => {
@@ -191,6 +199,10 @@ app.whenReady().then(() => {
     autoMuteEnabled = enabled
   })
 
+  ipcMain.handle('settings:update-sound-effects', async (_evt, enabled: boolean) => {
+    soundEffectsEnabled = enabled
+  })
+
   ipcMain.handle('settings:update-hotkey', async (_evt, hotkey: string) => {
     currentHotkeyGroups = parseHotkeyToKeyGroups(hotkey)
     console.log('Updated hotkey groups:', currentHotkeyGroups)
@@ -205,6 +217,8 @@ app.whenReady().then(() => {
       BrowserWindow.getAllWindows().forEach(window => {
         window.webContents.send('record:start')
       })
+      
+      playSound('bong.mp3', 0.1)
       
       if (autoMuteEnabled && process.platform === 'darwin') {
         getMacVolume()
@@ -228,6 +242,8 @@ app.whenReady().then(() => {
       BrowserWindow.getAllWindows().forEach(window => {
         window.webContents.send('record:stop')
       })
+      
+      playSound('bing.mp3', 0.1)
       
       if (autoMuteEnabled && process.platform === 'darwin') {
         setMacVolume(previousVolume)
