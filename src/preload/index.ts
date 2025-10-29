@@ -32,6 +32,9 @@ const bridge = {
   },
   updateAutoMute(enabled: boolean) {
     return ipcRenderer.invoke('settings:update-auto-mute', enabled)
+  },
+  updateTranscriptionModeHotkey(hotkey: string) {
+    return ipcRenderer.invoke('settings:update-transcription-hotkey', hotkey)
   }
 }
 

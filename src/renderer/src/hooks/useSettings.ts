@@ -11,9 +11,7 @@ export interface Settings {
   pushToTalk: boolean
   pushToTalkHotkey: string
   localTranscription: boolean
-  
-  // Assistant settings
-  autoCaptureScreenshot: boolean
+  transcriptionModeHotkey: string
   
   // Output settings
   autoCopy: boolean
@@ -28,7 +26,7 @@ const DEFAULT_SETTINGS: Settings = {
   pushToTalk: true,
   pushToTalkHotkey: 'Option ⌥',
   localTranscription: true,
-  autoCaptureScreenshot: false,
+  transcriptionModeHotkey: 'Option ⌥ + Shift ⇧ + Z',
   autoCopy: true,
   pressEnterAfter: false,
 }

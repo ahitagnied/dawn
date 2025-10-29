@@ -56,7 +56,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         )}
 
         {settingsTab === 'assistant' && (
-          <AssistantSettings settings={settings} onUpdateSetting={updateSetting} theme={theme} />
+          <AssistantSettings theme={theme} />
         )}
 
         {settingsTab === 'output' && (
