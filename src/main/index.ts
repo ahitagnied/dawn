@@ -230,7 +230,6 @@ app.whenReady().then(() => {
     pressedKeys.add(e.keycode)
     
     if (areAllKeysPressed(transcriptionModeKeyGroups, pressedKeys)) {
-      // Prevent repeated toggles from key repeat
       if (transcriptionHotkeyPressed) {
         return
       }
@@ -238,7 +237,6 @@ app.whenReady().then(() => {
       transcriptionHotkeyPressed = true
       
       if (transcriptionModeActive) {
-        // Stop recording (toggle off)
         recording = false
         transcriptionModeActive = false
         
@@ -256,7 +254,6 @@ app.whenReady().then(() => {
         
         return
       } else {
-        // Start recording (toggle on)
         currentRecordingMode = 'transcription'
         transcriptionModeActive = true
         lastRecordingMode = currentRecordingMode
@@ -315,7 +312,6 @@ app.whenReady().then(() => {
   uIOhook.on('keyup', async (e) => {
     pressedKeys.delete(e.keycode)
     
-    // Reset transcription hotkey flag when keys are released
     if (!areAllKeysPressed(transcriptionModeKeyGroups, pressedKeys)) {
       transcriptionHotkeyPressed = false
     }

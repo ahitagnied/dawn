@@ -2,10 +2,6 @@ import Groq from 'groq-sdk'
 
 export async function enhanceTranscription(text: string, screenshot?: string, apiKey?: string): Promise<string> {
   try {
-    console.log('=== LLM Enhancement Start ===')
-    console.log('Input text:', text)
-    console.log('Has screenshot:', !!screenshot)
-    
     const groq = new Groq({ apiKey })
 
     const messages: Array<{
@@ -56,7 +52,6 @@ export async function enhanceTranscription(text: string, screenshot?: string, ap
     }
 
     const model = screenshot ? 'llama-3.2-11b-vision-preview' : 'llama-3.1-8b-instant'
-    console.log('Using model:', model)
 
     const completion = await groq.chat.completions.create({
       model,
@@ -64,9 +59,6 @@ export async function enhanceTranscription(text: string, screenshot?: string, ap
     })
 
     const enhancedText = completion.choices[0]?.message?.content || text
-    console.log('Enhanced text:', enhancedText)
-    console.log('=== LLM Enhancement End ===')
-    
     return enhancedText
   } catch (error) {
     console.error('Error enhancing transcription:', error)
