@@ -349,12 +349,27 @@ app.whenReady().then(() => {
     const fs = require('fs')
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
-    const transcription = await groq.audio.transcriptions.create({
-      file: fs.createReadStream(file),
-      model: "whisper-large-v3-turbo",
-      temperature: 0,
-      response_format: "verbose_json",
-    })
+    let retries = 3
+    let transcription
+    while (retries > 0) {
+      try {
+        transcription = await groq.audio.transcriptions.create({
+          file: fs.createReadStream(file),
+          model: "whisper-large-v3-turbo",
+          temperature: 0,
+          response_format: "verbose_json",
+        })
+        break
+      } catch (error) {
+        retries--
+        if (retries === 0) {
+          console.error('STT failed after 3 attempts:', error)
+          throw error
+        }
+        console.log(`STT connection failed, retrying... (${retries} attempts left)`)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+    }
 
     if (lastRecordingMode === 'transcription' && smartTranscriptionEnabled) {
       const enhancedText = await enhanceTranscription(
