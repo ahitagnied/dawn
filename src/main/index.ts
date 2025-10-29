@@ -374,11 +374,11 @@ app.whenReady().then(() => {
         process.env.GROQ_API_KEY
       )
       lastRecordingMode = 'idle'
-      return { text: enhancedText }
+      return { text: enhancedText.trim() }
     }
 
     lastRecordingMode = 'idle'
-    return { text: transcription.text ?? '' }
+    return { text: (transcription.text ?? '').trim() }
   })
 
   ipcMain.handle('stt:paste', async (_evt, { text }: { text: string }) => {
