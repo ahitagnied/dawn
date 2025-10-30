@@ -24,9 +24,6 @@ const bridge = {
   pasteText(text: string) {
     return ipcRenderer.invoke('stt:paste', { text })
   },
-  sendTranscription(text: string) {
-    ipcRenderer.send('transcription:completed', { text })
-  },
   updatePushToTalkHotkey(hotkey: string) {
     return ipcRenderer.invoke('settings:update-hotkey', hotkey)
   },

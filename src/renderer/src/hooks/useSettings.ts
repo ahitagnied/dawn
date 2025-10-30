@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react'
 
 export interface Settings {
-  // General settings
   soundEffects: boolean
   autoMute: boolean
   darkMode: boolean
-  
-  // Transcription settings
   smartTranscription: boolean
   pushToTalk: boolean
   pushToTalkHotkey: string
@@ -16,8 +13,6 @@ export interface Settings {
   assistantModeHotkey: string
   assistantScreenshotEnabled: boolean
   assistantModel: string
-  
-  // Output settings
   autoCopy: boolean
   pressEnterAfter: boolean
 }
@@ -31,7 +26,7 @@ const DEFAULT_SETTINGS: Settings = {
   pushToTalkHotkey: 'Option ⌥',
   localTranscription: true,
   transcriptionModeHotkey: 'Option ⌥ + Shift ⇧ + Z',
-  assistantModeEnabled: false,
+  assistantModeEnabled: true,
   assistantModeHotkey: 'Option ⌥ + Shift ⇧ + S',
   assistantScreenshotEnabled: false,
   assistantModel: 'meta-llama/llama-4-maverick-17b-128e-instruct',

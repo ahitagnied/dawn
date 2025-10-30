@@ -134,10 +134,10 @@ app.whenReady().then(() => {
   let transcriptionModeActive = false
   let transcriptionHotkeyPressed = false
   let smartTranscriptionEnabled = false
-  let assistantModeEnabled = false
+  let assistantModeEnabled = true
   let assistantModeActive = false
   let assistantHotkeyPressed = false
-  let assistantModeKeyGroups: number[][] = [[56, 42, 31]] // Option + Shift + S
+  let assistantModeKeyGroups: number[][] = [[56, 42, 31]]
   let assistantScreenshotEnabled = false
   let assistantModel = 'meta-llama/llama-4-maverick-17b-128e-instruct'
   let selectedTextBeforeRecording: string | null = null
@@ -260,6 +260,19 @@ app.whenReady().then(() => {
     }
   }
 
+  const saveTranscriptionToHistory = (text: string) => {
+    const wordCount = text.trim().split(/\s+/).filter(word => word.length > 0).length
+    const mainWindow = findWindowByType('main')
+    if (mainWindow) {
+      mainWindow.webContents.send('transcription:add', {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        text,
+        timestamp: Date.now(),
+        wordCount
+      })
+    }
+  }
+
   ipcMain.handle('settings:update-auto-mute', async (_evt, enabled: boolean) => {
     autoMuteEnabled = enabled
   })
@@ -292,10 +305,15 @@ app.whenReady().then(() => {
     console.log('Updated assistant screenshot enabled:', assistantScreenshotEnabled)
   })
 
+  ipcMain.handle('settings:update-assistant-mode', async (_evt, enabled: boolean) => {
+    assistantModeEnabled = enabled
+    console.log('Updated assistant mode enabled:', assistantModeEnabled)
+  })
+
   uIOhook.on('keydown', async (e) => {
     pressedKeys.add(e.keycode)
     
-    if (areAllKeysPressed(assistantModeKeyGroups, pressedKeys)) {
+    if (assistantModeEnabled && areAllKeysPressed(assistantModeKeyGroups, pressedKeys)) {
       if (assistantHotkeyPressed) {
         return
       }
@@ -517,7 +535,9 @@ app.whenReady().then(() => {
       selectedTextBeforeRecording = null
       lastRecordingMode = 'idle'
       
-      return { text: aiResponse.trim() }
+      const trimmedResponse = aiResponse.trim()
+      saveTranscriptionToHistory(trimmedResponse)
+      return { text: trimmedResponse }
     }
     
     if (lastRecordingMode === 'transcription' && smartTranscriptionEnabled) {
@@ -527,11 +547,15 @@ app.whenReady().then(() => {
         process.env.GROQ_API_KEY
       )
       lastRecordingMode = 'idle'
-      return { text: enhancedText.trim() }
+      const trimmed = enhancedText.trim()
+      saveTranscriptionToHistory(trimmed)
+      return { text: trimmed }
     }
 
     lastRecordingMode = 'idle'
-    return { text: (transcription.text ?? '').trim() }
+    const trimmed = (transcription.text ?? '').trim()
+    saveTranscriptionToHistory(trimmed)
+    return { text: trimmed }
   })
 
   ipcMain.handle('stt:paste', async (_evt, { text }: { text: string }) => {
@@ -549,19 +573,6 @@ app.whenReady().then(() => {
     return true
   })
 
-  ipcMain.on('transcription:completed', (_event, { text }: { text: string }) => {
-    const wordCount = text.trim().split(/\s+/).filter(word => word.length > 0).length
-    const mainWindow = findWindowByType('main')
-
-    if (mainWindow) {
-      mainWindow.webContents.send('transcription:add', {
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        text,
-        timestamp: Date.now(),
-        wordCount
-      })
-    }
-  })
 
   app.on('activate', () => {
     if (!findWindowByType('overlay')) createOverlayWindow()

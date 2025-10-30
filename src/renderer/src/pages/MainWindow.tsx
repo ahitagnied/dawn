@@ -177,6 +177,7 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
               borderTopRightRadius: '12px',
               borderBottom: 'none',
               overflow: 'auto',
+              overflowX: 'hidden',
               position: 'relative'
             }}
             onScroll={(e) => {
@@ -236,7 +237,8 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
                           flex: 1,
                           fontSize: '14px', 
                           color: theme.text,
-                          lineHeight: '1.5'
+                          lineHeight: '1.5',
+                          wordWrap: 'break-word'
                         }}>
                           {transcription.text}
                         </div>

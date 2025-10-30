@@ -90,7 +90,6 @@ export function OverlayWindow() {
       const res = await window.bridge.transcribe(blob.type, buf)
       const text = res?.text || ''
       await window.bridge.pasteText(text)
-      window.bridge.sendTranscription(text)
     } catch (err) {
       console.error('[renderer] transcription/paste failed', err)
     }

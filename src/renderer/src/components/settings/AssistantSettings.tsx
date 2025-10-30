@@ -18,8 +18,13 @@ export function AssistantSettings({ settings, onUpdateSetting, theme }: Assistan
   return (
     <>
       <div>
-        <SettingsRow title="Enable Assistant Mode" description="Use AI to edit or generate text based on voice commands" theme={theme}>
-          <Toggle checked={settings.assistantModeEnabled} onChange={(val) => onUpdateSetting('assistantModeEnabled', val)} theme={theme} />
+        <SettingsRow title="Enable Assistant Mode" description="Allow AI assistant to process voice commands with context" theme={theme}>
+          <Toggle checked={settings.assistantModeEnabled} onChange={(val) => {
+            onUpdateSetting('assistantModeEnabled', val)
+            if (window.electron?.ipcRenderer) {
+              window.electron.ipcRenderer.invoke('settings:update-assistant-mode', val)
+            }
+          }} theme={theme} />
         </SettingsRow>
 
         <SettingsRow title="Assistant Hotkey" description="Keyboard shortcut to activate AI assistant" theme={theme}>
