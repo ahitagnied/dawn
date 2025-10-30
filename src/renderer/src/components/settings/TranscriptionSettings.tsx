@@ -53,6 +53,7 @@ export function TranscriptionSettings({ settings, onUpdateSetting, theme }: Tran
           window.bridge.updatePushToTalkHotkey(hotkey)
         }}
         currentHotkey={settings.pushToTalkHotkey}
+        theme={theme}
       />
 
       <HotkeyDialog
@@ -64,8 +65,8 @@ export function TranscriptionSettings({ settings, onUpdateSetting, theme }: Tran
         }}
         currentHotkey={settings.transcriptionModeHotkey}
         title="Press the hotkey you want to use for transcription mode:"
+        theme={theme}
       />
     </>
   )
 }
-

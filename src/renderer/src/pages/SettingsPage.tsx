@@ -77,6 +77,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         <Button 
           onClick={onBack} 
           variant="icon"
+          theme={theme}
           style={{ 
             border: `1px solid ${theme.border}`, 
             background: theme.background,
@@ -92,6 +93,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           variant="icon"
           active={settingsTab === 'output'}
           title="Output"
+          theme={theme}
           style={{
             background: settingsTab === 'output' ? theme.surface : 'transparent',
             backdropFilter: settingsTab === 'output' ? 'blur(8px)' : 'none'
@@ -107,6 +109,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           variant="icon"
           active={settingsTab === 'assistant'}
           title="Assistant"
+          theme={theme}
           style={{
             background: settingsTab === 'assistant' ? theme.surface : 'transparent',
             backdropFilter: settingsTab === 'assistant' ? 'blur(8px)' : 'none'
@@ -122,6 +125,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           variant="icon"
           active={settingsTab === 'transcription'}
           title="Transcription"
+          theme={theme}
           style={{
             background: settingsTab === 'transcription' ? theme.surface : 'transparent',
             backdropFilter: settingsTab === 'transcription' ? 'blur(8px)' : 'none'
@@ -137,6 +141,7 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           variant="icon"
           active={settingsTab === 'general'}
           title="General"
+          theme={theme}
           style={{
             background: settingsTab === 'general' ? theme.surface : 'transparent',
             backdropFilter: settingsTab === 'general' ? 'blur(8px)' : 'none'

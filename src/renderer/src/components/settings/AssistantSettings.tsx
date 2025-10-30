@@ -52,6 +52,7 @@ export function AssistantSettings({ settings, onUpdateSetting, theme }: Assistan
         }}
         currentHotkey={settings.assistantModeHotkey}
         title="Press the hotkey you want to use for assistant mode:"
+        theme={theme}
       />
     </>
   )

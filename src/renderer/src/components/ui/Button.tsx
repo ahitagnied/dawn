@@ -24,11 +24,11 @@ export function Button({ onClick, children, variant = 'secondary', title, active
     primary: {
       ...baseStyle,
       padding: '8px 24px',
-      border: `1px solid ${theme.border}`,
+      border: 'none',
       borderRadius: '6px',
-      background: isHovered ? theme.buttonHover : theme.buttonBg,
+      background: isHovered ? theme.accentHover : theme.accent,
       backdropFilter: 'blur(8px)',
-      color: theme.text,
+      color: theme.toggleThumb,
       fontSize: '12px',
       fontWeight: '500',
     },
@@ -47,6 +47,7 @@ export function Button({ onClick, children, variant = 'secondary', title, active
       ...baseStyle,
       background: active ? theme.surface : 'transparent',
       backdropFilter: active ? 'blur(8px)' : 'none',
+      border: active ? `1px solid ${theme.border}` : '1px solid transparent',
       borderRadius: '8px',
       width: '40px',
       height: '40px',
@@ -68,4 +69,3 @@ export function Button({ onClick, children, variant = 'secondary', title, active
     </button>
   )
 }
-

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Button } from './Button'
+import { Theme, lightTheme } from '../../utils/theme'
 
 interface HotkeyDialogProps {
   isOpen: boolean
@@ -7,6 +7,7 @@ interface HotkeyDialogProps {
   onSave: (hotkey: string) => void
   currentHotkey?: string
   title?: string
+  theme?: Theme
 }
 
 // Key code mappings for special keys
@@ -55,7 +56,14 @@ function sortKeys(keys: string[]): string[] {
   return [...modifiers, ...specials, ...alphanumeric]
 }
 
-export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = 'Press the hotkey you want to use to start recording:' }: HotkeyDialogProps) {
+export function HotkeyDialog({
+  isOpen,
+  onClose,
+  onSave,
+  currentHotkey,
+  title = 'Press the hotkey you want to use to start recording:',
+  theme = lightTheme,
+}: HotkeyDialogProps) {
   const [recordedKeys, setRecordedKeys] = useState<Set<string>>(new Set())
   const [displayKeys, setDisplayKeys] = useState<string[]>([])
   const [allKeysReleased, setAllKeysReleased] = useState(true)
@@ -139,15 +147,15 @@ export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = '
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(0, 0, 0, 0.5)',
+      background: theme.scrim,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 10000,
-      backdropFilter: 'blur(6px)',
+      backdropFilter: 'blur(8px)',
     }}>
       <div style={{
-        background: 'rgba(26, 26, 26, 0.9)',
+        background: theme.modalBackground,
         backdropFilter: 'blur(8px)',
         borderRadius: '16px',
         padding: '48px',
@@ -157,9 +165,10 @@ export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = '
         alignItems: 'center',
         gap: '32px',
         boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+        border: `1px solid ${theme.modalBorder}`,
       }}>
         <h2 style={{
-          color: 'white',
+          color: theme.text,
           fontSize: '18px',
           fontWeight: '500',
           margin: 0,
@@ -170,7 +179,7 @@ export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = '
         </h2>
 
         <div style={{
-          background: 'rgba(42, 42, 42, 0.5)',
+          background: theme.modalSurface,
           backdropFilter: 'blur(8px)',
           borderRadius: '12px',
           padding: '24px 32px',
@@ -180,14 +189,14 @@ export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = '
           justifyContent: 'center',
           gap: '12px',
           minWidth: '300px',
-          border: '2px solid rgba(58, 58, 58, 0.5)',
+          border: `2px solid ${theme.modalBorder}`,
         }}>
           {displayKeys.length > 0 ? (
             <>
               {displayKeys.map((key, index) => (
                 <span key={index} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span style={{
-                    color: 'white',
+                    color: theme.text,
                     fontSize: '28px',
                     fontWeight: '500',
                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -195,17 +204,17 @@ export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = '
                     {formatKey(key)}
                   </span>
                   {index < displayKeys.length - 1 && (
-                    <span style={{ color: 'white', fontSize: '28px', opacity: 0.5 }}>+</span>
+                    <span style={{ color: theme.text, fontSize: '28px', opacity: 0.5 }}>+</span>
                   )}
                 </span>
               ))}
             </>
           ) : (
             <span style={{
-              color: '#666',
+              color: theme.textSecondary,
               fontSize: '16px',
             }}>
-              Press any key combination...
+              {currentHotkey ? `Current hotkey: ${currentHotkey}` : 'Press any key combination...'}
             </span>
           )}
         </div>
@@ -220,10 +229,10 @@ export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = '
             style={{
               flex: 1,
               padding: '12px 24px',
-              background: 'rgba(42, 42, 42, 0.5)',
+              background: theme.buttonBg,
               backdropFilter: 'blur(8px)',
-              color: 'white',
-              border: '1px solid rgba(58, 58, 58, 0.5)',
+              color: theme.text,
+              border: `1px solid ${theme.border}`,
               borderRadius: '8px',
               fontSize: '15px',
               fontWeight: '500',
@@ -231,10 +240,10 @@ export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = '
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(58, 58, 58, 0.5)'
+              e.currentTarget.style.background = theme.buttonHover
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(42, 42, 42, 0.5)'
+              e.currentTarget.style.background = theme.buttonBg
             }}
           >
             Cancel
@@ -245,10 +254,10 @@ export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = '
             style={{
               flex: 1,
               padding: '12px 24px',
-              background: displayKeys.length === 0 ? 'rgba(58, 58, 58, 0.5)' : 'rgba(0, 122, 255, 0.8)',
+              background: displayKeys.length === 0 ? theme.buttonBg : theme.accent,
               backdropFilter: 'blur(8px)',
-              color: displayKeys.length === 0 ? '#666' : 'white',
-              border: 'none',
+              color: displayKeys.length === 0 ? theme.textDisabled : theme.toggleThumb,
+              border: displayKeys.length === 0 ? `1px solid ${theme.border}` : 'none',
               borderRadius: '8px',
               fontSize: '15px',
               fontWeight: '500',
@@ -257,12 +266,12 @@ export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = '
             }}
             onMouseEnter={(e) => {
               if (displayKeys.length > 0) {
-                e.currentTarget.style.background = 'rgba(0, 86, 179, 0.8)'
+                e.currentTarget.style.background = theme.accentHover
               }
             }}
             onMouseLeave={(e) => {
               if (displayKeys.length > 0) {
-                e.currentTarget.style.background = 'rgba(0, 122, 255, 0.8)'
+                e.currentTarget.style.background = theme.accent
               }
             }}
           >
@@ -273,4 +282,3 @@ export function HotkeyDialog({ isOpen, onClose, onSave, currentHotkey, title = '
     </div>
   )
 }
-
