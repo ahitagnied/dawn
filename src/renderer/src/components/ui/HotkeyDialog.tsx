@@ -29,9 +29,62 @@ const KEY_SYMBOLS: Record<string, string> = {
 
 const MODIFIER_KEYS = ['Meta', 'Control', 'Alt', 'Shift']
 const SPECIAL_KEYS = ['Enter', 'Escape', 'Tab', 'Backspace', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ']
+const CODE_KEY_MAP: Record<string, string> = {
+  'Space': ' ',
+  'Enter': 'Enter',
+  'NumpadEnter': 'Enter',
+  'Escape': 'Escape',
+  'Tab': 'Tab',
+  'Backspace': 'Backspace',
+  'ArrowUp': 'ArrowUp',
+  'ArrowDown': 'ArrowDown',
+  'ArrowLeft': 'ArrowLeft',
+  'ArrowRight': 'ArrowRight',
+  'BracketLeft': '[',
+  'BracketRight': ']',
+  'Backslash': '\\',
+  'Semicolon': ';',
+  'Quote': '\'',
+  'Comma': ',',
+  'Period': '.',
+  'Slash': '/',
+  'Backquote': '`',
+  'Minus': '-',
+  'Equal': '=',
+}
 
 function formatKey(key: string): string {
   return KEY_SYMBOLS[key] || key.toUpperCase()
+}
+
+function normalizeKey(event: KeyboardEvent): string | null {
+  if (MODIFIER_KEYS.includes(event.key)) {
+    return null
+  }
+
+  const { code } = event
+
+  if (code.startsWith('Key')) {
+    return code.slice(3).toUpperCase()
+  }
+
+  if (code.startsWith('Digit')) {
+    return code.slice(5)
+  }
+
+  if (CODE_KEY_MAP[code]) {
+    return CODE_KEY_MAP[code]
+  }
+
+  if (SPECIAL_KEYS.includes(event.key)) {
+    return event.key
+  }
+
+  if (event.key.length === 1) {
+    return event.key.toUpperCase()
+  }
+
+  return event.key
 }
 
 function sortKeys(keys: string[]): string[] {
@@ -95,7 +148,10 @@ export function HotkeyDialog({
       if (e.key === 'Shift' || e.shiftKey) keys.add('Shift')
       
       if (!MODIFIER_KEYS.includes(e.key)) {
-        keys.add(e.key)
+        const normalizedKey = normalizeKey(e)
+        if (normalizedKey) {
+          keys.add(normalizedKey)
+        }
       }
 
       setRecordedKeys(keys)

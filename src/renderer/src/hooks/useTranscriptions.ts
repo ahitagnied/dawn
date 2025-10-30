@@ -3,10 +3,35 @@ import { Transcription } from '../../../types/transcription'
 
 const TRANSCRIPTIONS_STORAGE_KEY = 'transcriptions'
 
+const toNumber = (value: unknown): number => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const normalizeTranscription = (raw: any): Transcription => {
+  return {
+    id: typeof raw?.id === 'string' ? raw.id : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+    text: typeof raw?.text === 'string' ? raw.text : '',
+    timestamp: typeof raw?.timestamp === 'number' ? raw.timestamp : Date.now(),
+    wordsIn: toNumber(raw?.wordsIn),
+    wordsOut: toNumber(raw?.wordsOut),
+    duration: toNumber(raw?.duration),
+  }
+}
+
 export function useTranscriptions() {
   const [transcriptions, setTranscriptions] = useState<Transcription[]>(() => {
     const saved = localStorage.getItem(TRANSCRIPTIONS_STORAGE_KEY)
-    return saved ? JSON.parse(saved) : []
+    if (!saved) return []
+    try {
+      const parsed = JSON.parse(saved)
+      if (!Array.isArray(parsed)) return []
+      return parsed.map(normalizeTranscription)
+    } catch (error) {
+      console.error('Failed to parse saved transcriptions:', error)
+      return []
+    }
   })
 
   useEffect(() => {
@@ -15,11 +40,10 @@ export function useTranscriptions() {
 
   useEffect(() => {
     const unsubscribe = window.bridge?.onTranscriptionAdd?.((transcription) => {
-      setTranscriptions(prev => [transcription, ...prev])
+      setTranscriptions(prev => [normalizeTranscription(transcription), ...prev])
     })
     return unsubscribe
   }, [])
 
   return { transcriptions }
 }
-

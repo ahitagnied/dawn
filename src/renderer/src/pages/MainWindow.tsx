@@ -13,11 +13,24 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
   const { settings } = useSettings()
   const theme = getTheme(settings.darkMode)
 
-  const wordsIn = transcriptions.reduce((sum, t) => sum + t.wordsIn, 0)
-  const wordsOut = transcriptions.reduce((sum, t) => sum + t.wordsOut, 0)
-  const totalSeconds = transcriptions.reduce((sum, t) => sum + t.duration, 0)
-  const totalSecondsFormatted = totalSeconds.toFixed(2)
-  const wpm = totalSeconds > 0 ? ((wordsOut / totalSeconds) * 60) : 0
+  const stats = useMemo(() => {
+    return transcriptions.reduce(
+      (acc, t) => {
+        const wordsIn = Number.isFinite(t.wordsIn) ? t.wordsIn : Number(t.wordsIn) || 0
+        const wordsOut = Number.isFinite(t.wordsOut) ? t.wordsOut : Number(t.wordsOut) || 0
+        const duration = Number.isFinite(t.duration) ? t.duration : Number(t.duration) || 0
+
+        acc.wordsIn += wordsIn
+        acc.wordsOut += wordsOut
+        acc.seconds += duration
+        return acc
+      },
+      { wordsIn: 0, wordsOut: 0, seconds: 0 }
+    )
+  }, [transcriptions])
+
+  const totalSecondsFormatted = stats.seconds.toFixed(2)
+  const wpm = stats.seconds > 0 ? ((stats.wordsOut / stats.seconds) * 60) : 0
   const wpmFormatted = wpm.toFixed(2)
 
   const getGreeting = () => {
@@ -107,7 +120,7 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '25px', fontWeight: 'normal', color: theme.text, marginBottom: '10px' }}>
-                {wordsIn}
+                {stats.wordsIn.toLocaleString()}
               </div>
               <div style={{ fontSize: '12px', color: theme.textSecondary }}>words in</div>
             </div>
@@ -116,7 +129,7 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
             
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '25px', fontWeight: 'normal', color: theme.text, marginBottom: '10px' }}>
-                {wordsOut}
+                {stats.wordsOut.toLocaleString()}
               </div>
               <div style={{ fontSize: '12px', color: theme.textSecondary }}>words out</div>
             </div>
