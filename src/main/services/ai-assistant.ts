@@ -21,63 +21,73 @@ export async function processAssistantRequest({
     const isEditingMode = selectedText != null && selectedText.length > 0
 
     const messages: Array<{
-      role: 'system' | 'user'
+      role: 'system' | 'user' | 'assistant'
       content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>
-    }> = [
-      {
+    }> = []
+
+    // System prompt
+    if (screenshot) {
+      messages.push({
         role: 'system',
         content: isEditingMode
-          ? 'You are a text editor that rewrites text based on instructions. Output ONLY the edited text with no preambles or explanations.'
-          : 'You are a helpful text generation assistant.'
-      }
-    ]
-
-    if (screenshot) {
-      const contentArray: Array<{ type: string; text?: string; image_url?: { url: string } }> = []
-
-      contentArray.push({
-        type: 'image_url',
-        image_url: {
-          url: screenshot
-        }
-      })
-
-      if (isEditingMode) {
-        contentArray.push({
-          type: 'text',
-          text: `Original text: ${selectedText}\n\nInstructions: ${instructions}`
-        })
-      } else {
-        contentArray.push({
-          type: 'text',
-          text: instructions
-        })
-      }
-
-      messages.push({
-        role: 'user',
-        content: contentArray
+          ? 'You are a text editor that rewrites text based on instructions and visual context. Your response MUST contain ONLY the edited text with NO introductory phrases or explanations.'
+          : 'You are a helpful text generation assistant that uses visual context to inform your responses. Your response MUST contain ONLY the generated text with NO introductory phrases or explanations.'
       })
     } else {
-      if (isEditingMode) {
-        messages.push({
-          role: 'user',
-          content: `Original text: ${selectedText}\n\nInstructions: ${instructions}`
-        })
-      } else {
-        messages.push({
-          role: 'user',
-          content: instructions
-        })
-      }
+      messages.push({
+        role: 'system',
+        content: isEditingMode
+          ? 'You are a text editor that rewrites text based on instructions. CRITICAL: Your response MUST contain ONLY the edited text with ABSOLUTELY NO introductory phrases, NO explanations, NO "Here is the rewritten text", NO comments about what you did, and NO concluding remarks. Do not start with "Here", "I", or any other introductory word. Just give the edited text directly. The user will only see your exact output, so it must be ready to use immediately.'
+          : 'You are a helpful text generation assistant. CRITICAL: Your response MUST contain ONLY the generated text with ABSOLUTELY NO introductory phrases, NO explanations, NO "Here is the text", NO comments about what you did, and NO concluding remarks. Do not start with "Here", "I", or any other introductory word. Just give the generated text directly. The user will only see your exact output, so it must be ready to use immediately.'
+      })
     }
 
-    const selectedModel = model || 'meta-llama/llama-4-maverick-17b-128e-instruct'
+    // User messages
+    if (screenshot) {
+      const contentArray: Array<{ type: string; text?: string; image_url?: { url: string } }> = [
+        {
+          type: 'text',
+          text: isEditingMode
+            ? `I will give you instructions followed by text to edit. The format will be "[INSTRUCTIONS]: [TEXT]". The screenshot shows what is on my screen for context. Only return the edited text with no additional comments or explanations. Here is my request: ${instructions}: ${selectedText}`
+            : `I need you to generate text based on the following instructions. The screenshot shows what is on my screen for context. Only return the generated text with no additional comments or explanations. Here is my request: ${instructions}`
+        },
+        {
+          type: 'image_url',
+          image_url: { url: screenshot }
+        }
+      ]
+      messages.push({ role: 'user', content: contentArray })
+    } else {
+      // Multi-message reinforcement pattern
+      messages.push(
+        {
+          role: 'user',
+          content: isEditingMode
+            ? 'I will give you instructions followed by text to edit. The format will be "[INSTRUCTIONS]: [TEXT]". Only return the edited text with no additional comments or explanations. Do not start with "Here", "I", or any other introductory word or phrase.'
+            : 'I will give you instructions for generating text. Only return the generated text with no additional comments or explanations. Do not start with "Here", "I", or any other introductory word or phrase.'
+        },
+        {
+          role: 'assistant',
+          content: isEditingMode
+            ? 'I understand. I will only return the edited text with no additional comments or explanations.'
+            : 'I understand. I will only return the generated text with no additional comments or explanations.'
+        },
+        {
+          role: 'user',
+          content: isEditingMode
+            ? `IMPORTANT: Your response must start with the edited text directly. Do not include any preamble like "Here is" or "I have". ${instructions}: ${selectedText}`
+            : `IMPORTANT: Your response must start with the generated text directly. Do not include any preamble like "Here is" or "I have". ${instructions}`
+        }
+      )
+    }
+
+    const selectedModel = model || 'llama3-70b-8192'
 
     const completion = await groq.chat.completions.create({
       model: selectedModel,
       messages: messages as any,
-      temperature: 0
+      temperature: 0.2,
+      max_tokens: 2000
     })
 
     const responseText = completion.choices[0]?.message?.content || ''
