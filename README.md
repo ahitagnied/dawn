@@ -10,9 +10,13 @@
 
 </div>
 
+<br>
+
 <div align="center">
   <img src="resources/dawn-text.png" alt="dawn logo" width="250"/>
 </div>
+
+<br>
 
 Dawn is a STT app with Push-to-talk to normal conversations, Transcription Mode for longer conversations. It also lets you generate text such as emails or Cursor prompts given autio context and lets you edit text when selected. 
 
