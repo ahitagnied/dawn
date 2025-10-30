@@ -35,6 +35,12 @@ const bridge = {
   },
   updateTranscriptionModeHotkey(hotkey: string) {
     return ipcRenderer.invoke('settings:update-transcription-hotkey', hotkey)
+  },
+  updateAssistantModeHotkey(hotkey: string) {
+    return ipcRenderer.invoke('settings:update-assistant-mode-hotkey', hotkey)
+  },
+  updateAssistantScreenshot(enabled: boolean) {
+    return ipcRenderer.invoke('settings:update-assistant-screenshot', enabled)
   }
 }
 

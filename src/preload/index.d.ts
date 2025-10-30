@@ -11,6 +11,8 @@ interface Bridge {
   updatePushToTalkHotkey(hotkey: string): Promise<void>
   updateAutoMute(enabled: boolean): Promise<void>
   updateTranscriptionModeHotkey(hotkey: string): Promise<void>
+  updateAssistantModeHotkey(hotkey: string): Promise<void>
+  updateAssistantScreenshot(enabled: boolean): Promise<void>
 }
 
 declare global {

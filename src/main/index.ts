@@ -94,7 +94,7 @@ function findWindowByType(type: 'main' | 'overlay'): BrowserWindow | undefined {
 }
 
 app.whenReady().then(() => {
-  type RecordingMode = 'push-to-talk' | 'transcription' | 'idle'
+  type RecordingMode = 'push-to-talk' | 'transcription' | 'assistant' | 'idle'
 
   electronApp.setAppUserModelId('com.electron')
 
@@ -134,6 +134,13 @@ app.whenReady().then(() => {
   let transcriptionModeActive = false
   let transcriptionHotkeyPressed = false
   let smartTranscriptionEnabled = false
+  let assistantModeEnabled = false
+  let assistantModeActive = false
+  let assistantHotkeyPressed = false
+  let assistantModeKeyGroups: number[][] = [[56, 42, 31]] // Option + Shift + S
+  let assistantScreenshotEnabled = false
+  let assistantModel = 'meta-llama/llama-4-maverick-17b-128e-instruct'
+  let selectedTextBeforeRecording: string | null = null
 
   const KEY_TO_KEYCODE: Record<string, number[]> = {
     'Cmd ⌘': [3675, 3676],
@@ -204,6 +211,55 @@ app.whenReady().then(() => {
     })
   }
 
+  const detectEditingMode = async (): Promise<{ isEditing: boolean; selectedText: string }> => {
+    const originalClipboard = clipboard.readText()
+    
+    await new Promise<void>((resolve, reject) => {
+      execFile(
+        'osascript',
+        ['-e', 'tell application "System Events" to keystroke "c" using {command down}'],
+        (err) => (err ? reject(err) : resolve())
+      )
+    })
+    
+    await new Promise(resolve => setTimeout(resolve, 150))
+    
+    const clipboardText = clipboard.readText()
+    const isEditing = clipboardText.length > 0 && clipboardText !== originalClipboard
+    
+    return { 
+      isEditing, 
+      selectedText: isEditing ? clipboardText : '' 
+    }
+  }
+
+  const captureScreenshot = async (): Promise<string | null> => {
+    if (!assistantScreenshotEnabled) {
+      return null
+    }
+    
+    try {
+      const screenshotPath = join(tmpdir(), `screenshot-${Date.now()}.png`)
+      
+      await new Promise<void>((resolve, reject) => {
+        execFile('screencapture', ['-x', screenshotPath], (err) => {
+          if (err) return reject(err)
+          resolve()
+        })
+      })
+      
+      const fs = require('fs')
+      const imageBuffer = fs.readFileSync(screenshotPath)
+      const base64Image = imageBuffer.toString('base64')
+      fs.unlinkSync(screenshotPath)
+      
+      return `data:image/png;base64,${base64Image}`
+    } catch (error) {
+      console.error('Screenshot capture failed:', error)
+      return null
+    }
+  }
+
   ipcMain.handle('settings:update-auto-mute', async (_evt, enabled: boolean) => {
     autoMuteEnabled = enabled
   })
@@ -226,8 +282,78 @@ app.whenReady().then(() => {
     smartTranscriptionEnabled = enabled
   })
 
+  ipcMain.handle('settings:update-assistant-mode-hotkey', async (_evt, hotkey: string) => {
+    assistantModeKeyGroups = parseHotkeyToKeyGroups(hotkey)
+    console.log('Updated assistant mode hotkey groups:', assistantModeKeyGroups)
+  })
+
+  ipcMain.handle('settings:update-assistant-screenshot', async (_evt, enabled: boolean) => {
+    assistantScreenshotEnabled = enabled
+    console.log('Updated assistant screenshot enabled:', assistantScreenshotEnabled)
+  })
+
   uIOhook.on('keydown', async (e) => {
     pressedKeys.add(e.keycode)
+    
+    if (areAllKeysPressed(assistantModeKeyGroups, pressedKeys)) {
+      if (assistantHotkeyPressed) {
+        return
+      }
+      
+      assistantHotkeyPressed = true
+      
+      if (assistantModeActive) {
+        recording = false
+        assistantModeActive = false
+        
+        BrowserWindow.getAllWindows().forEach(window => {
+          window.webContents.send('record:stop')
+        })
+        
+        playSound('bing.mp3', 0.1)
+        
+        if (autoMuteEnabled && process.platform === 'darwin') {
+          setMacVolume(previousVolume).catch(error => {
+            console.error('Failed to restore system volume:', error)
+          })
+        }
+        
+        return
+      } else {
+        currentRecordingMode = 'assistant'
+        assistantModeActive = true
+        lastRecordingMode = currentRecordingMode
+        recording = true
+        
+        try {
+          const context = await detectEditingMode()
+          selectedTextBeforeRecording = context.isEditing ? context.selectedText : null
+          console.log('Assistant mode context:', { isEditing: context.isEditing, textLength: context.selectedText.length })
+        } catch (error) {
+          console.error('Failed to detect editing mode:', error)
+          selectedTextBeforeRecording = null
+        }
+        
+        BrowserWindow.getAllWindows().forEach(window => {
+          window.webContents.send('record:start')
+        })
+        
+        playSound('bong.mp3', 0.1)
+        
+        if (autoMuteEnabled && process.platform === 'darwin') {
+          getMacVolume()
+            .then(volume => {
+              previousVolume = volume
+              return setMacVolume(0)
+            })
+            .catch(error => {
+              console.error('Failed to mute system volume:', error)
+            })
+        }
+        
+        return
+      }
+    }
     
     if (areAllKeysPressed(transcriptionModeKeyGroups, pressedKeys)) {
       if (transcriptionHotkeyPressed) {
@@ -312,6 +438,10 @@ app.whenReady().then(() => {
   uIOhook.on('keyup', async (e) => {
     pressedKeys.delete(e.keycode)
     
+    if (!areAllKeysPressed(assistantModeKeyGroups, pressedKeys)) {
+      assistantHotkeyPressed = false
+    }
+    
     if (!areAllKeysPressed(transcriptionModeKeyGroups, pressedKeys)) {
       transcriptionHotkeyPressed = false
     }
@@ -367,6 +497,29 @@ app.whenReady().then(() => {
       }
     }
 
+    if (lastRecordingMode === 'assistant') {
+      let screenshot: string | null = null
+      
+      if (assistantScreenshotEnabled) {
+        screenshot = await captureScreenshot()
+        console.log('Screenshot captured:', screenshot ? 'yes' : 'no')
+      }
+      
+      const { processAssistantRequest } = await import('./services/ai-assistant')
+      const aiResponse = await processAssistantRequest({
+        instructions: transcription.text ?? '',
+        selectedText: selectedTextBeforeRecording,
+        screenshot: screenshot,
+        model: assistantModel,
+        apiKey: process.env.GROQ_API_KEY
+      })
+      
+      selectedTextBeforeRecording = null
+      lastRecordingMode = 'idle'
+      
+      return { text: aiResponse.trim() }
+    }
+    
     if (lastRecordingMode === 'transcription' && smartTranscriptionEnabled) {
       const enhancedText = await enhanceTranscription(
         transcription.text ?? '',

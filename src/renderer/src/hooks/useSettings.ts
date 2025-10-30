@@ -12,6 +12,10 @@ export interface Settings {
   pushToTalkHotkey: string
   localTranscription: boolean
   transcriptionModeHotkey: string
+  assistantModeEnabled: boolean
+  assistantModeHotkey: string
+  assistantScreenshotEnabled: boolean
+  assistantModel: string
   
   // Output settings
   autoCopy: boolean
@@ -27,6 +31,10 @@ const DEFAULT_SETTINGS: Settings = {
   pushToTalkHotkey: 'Option ⌥',
   localTranscription: true,
   transcriptionModeHotkey: 'Option ⌥ + Shift ⇧ + Z',
+  assistantModeEnabled: false,
+  assistantModeHotkey: 'Option ⌥ + Shift ⇧ + S',
+  assistantScreenshotEnabled: false,
+  assistantModel: 'meta-llama/llama-4-maverick-17b-128e-instruct',
   autoCopy: true,
   pressEnterAfter: false,
 }

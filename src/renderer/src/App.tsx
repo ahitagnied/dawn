@@ -13,6 +13,8 @@ function MainApp() {
       window.bridge.updatePushToTalkHotkey(settings.pushToTalkHotkey)
       window.bridge.updateTranscriptionModeHotkey(settings.transcriptionModeHotkey)
       window.bridge.updateAutoMute(settings.autoMute)
+      window.bridge.updateAssistantModeHotkey(settings.assistantModeHotkey)
+      window.bridge.updateAssistantScreenshot(settings.assistantScreenshotEnabled)
     }
     
     if (window.electron?.ipcRenderer) {
