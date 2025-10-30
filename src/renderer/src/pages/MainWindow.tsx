@@ -13,10 +13,12 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
   const { settings } = useSettings()
   const theme = getTheme(settings.darkMode)
 
-  const wordsIn = transcriptions.reduce((sum, t) => sum + t.wordCount, 0)
-  const wordsOut = transcriptions.reduce((sum, t) => sum + t.wordCount, 0)
-  const totalSeconds = transcriptions.reduce((sum, t) => sum + (t.duration || 0), 0)
-  const wpm = totalSeconds > 0 ? Math.round((wordsOut / totalSeconds) * 60) : 0
+  const wordsIn = transcriptions.reduce((sum, t) => sum + t.wordsIn, 0)
+  const wordsOut = transcriptions.reduce((sum, t) => sum + t.wordsOut, 0)
+  const totalSeconds = transcriptions.reduce((sum, t) => sum + t.duration, 0)
+  const totalSecondsFormatted = totalSeconds.toFixed(2)
+  const wpm = totalSeconds > 0 ? ((wordsOut / totalSeconds) * 60) : 0
+  const wpmFormatted = wpm.toFixed(2)
 
   const getGreeting = () => {
     const hour = new Date().getHours()
@@ -123,7 +125,7 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
             
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '25px', fontWeight: 'normal', color: theme.text, marginBottom: '10px' }}>
-                {totalSeconds}
+                {totalSecondsFormatted}
               </div>
               <div style={{ fontSize: '12px', color: theme.textSecondary }}>seconds</div>
             </div>
@@ -132,7 +134,7 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
             
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '25px', fontWeight: 'normal', color: theme.text, marginBottom: '10px' }}>
-                {wpm}
+                {wpmFormatted}
               </div>
               <div style={{ fontSize: '12px', color: theme.textSecondary }}>wpm</div>
             </div>
@@ -238,7 +240,8 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
                           fontSize: '14px', 
                           color: theme.text,
                           lineHeight: '1.5',
-                          wordWrap: 'break-word'
+                          wordWrap: 'break-word',
+                          whiteSpace: 'pre-wrap'
                         }}>
                           {transcription.text}
                         </div>

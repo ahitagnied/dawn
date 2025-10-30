@@ -5,7 +5,7 @@ interface Bridge {
   onRecordStart(cb: () => void): () => void
   onRecordStop(cb: () => void): () => void
   onTranscriptionAdd(cb: (transcription: Transcription) => void): () => void
-  transcribe(mime: string, arrayBuffer: ArrayBuffer): Promise<{ text: string }>
+  transcribe(mime: string, arrayBuffer: ArrayBuffer, duration: number): Promise<{ text: string }>
   pasteText(text: string): Promise<boolean>
   updatePushToTalkHotkey(hotkey: string): Promise<void>
   updateAutoMute(enabled: boolean): Promise<void>

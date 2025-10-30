@@ -18,8 +18,8 @@ const bridge = {
     ipcRenderer.on('transcription:add', handler)
     return () => ipcRenderer.removeListener('transcription:add', handler)
   },
-  transcribe(mime: string, arrayBuffer: ArrayBuffer) {
-    return ipcRenderer.invoke('stt:transcribe', { mime, buf: Buffer.from(arrayBuffer) })
+  transcribe(mime: string, arrayBuffer: ArrayBuffer, duration: number) {
+    return ipcRenderer.invoke('stt:transcribe', { mime, buf: Buffer.from(arrayBuffer), duration })
   },
   pasteText(text: string) {
     return ipcRenderer.invoke('stt:paste', { text })

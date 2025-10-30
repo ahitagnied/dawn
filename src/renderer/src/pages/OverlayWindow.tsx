@@ -19,6 +19,7 @@ export function OverlayWindow() {
   const recordingRef = useRef(false)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const animationRef = useRef<number | null>(null)
+  const recordingStartTimeRef = useRef<number | null>(null)
 
   useEffect(() => {
     const offStart = window.bridge?.onRecordStart?.(startRecording)
@@ -33,6 +34,7 @@ export function OverlayWindow() {
     if (recordingRef.current) return
 
     recordingRef.current = true
+    recordingStartTimeRef.current = Date.now()
     setRecording(true)
 
     streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -83,11 +85,13 @@ export function OverlayWindow() {
 
     streamRef.current?.getTracks().forEach((t) => t.stop())
 
+    const duration = recordingStartTimeRef.current ? (Date.now() - recordingStartTimeRef.current) / 1000 : 0
+
     try {
       const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
       chunksRef.current = []
       const buf = await blob.arrayBuffer()
-      const res = await window.bridge.transcribe(blob.type, buf)
+      const res = await window.bridge.transcribe(blob.type, buf, duration)
       const text = res?.text || ''
       await window.bridge.pasteText(text)
     } catch (err) {

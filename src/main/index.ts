@@ -260,15 +260,16 @@ app.whenReady().then(() => {
     }
   }
 
-  const saveTranscriptionToHistory = (text: string) => {
-    const wordCount = text.trim().split(/\s+/).filter(word => word.length > 0).length
+  const saveTranscriptionToHistory = (text: string, wordsIn: number, wordsOut: number, duration: number) => {
     const mainWindow = findWindowByType('main')
     if (mainWindow) {
       mainWindow.webContents.send('transcription:add', {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         text,
         timestamp: Date.now(),
-        wordCount
+        wordsIn,
+        wordsOut,
+        duration
       })
     }
   }
@@ -484,7 +485,7 @@ app.whenReady().then(() => {
 
   uIOhook.start()
 
-  ipcMain.handle('stt:transcribe', async (_evt, { mime, buf }: { mime: string; buf: ArrayBuffer }) => {
+  ipcMain.handle('stt:transcribe', async (_evt, { mime, buf, duration }: { mime: string; buf: ArrayBuffer; duration: number }) => {
     const dir = mkdtempSync(join(tmpdir(), 'stt-'))
     const ext = mime.includes('webm') ? 'webm' : 'wav'
     const file = join(dir, `audio.${ext}`)
@@ -536,7 +537,9 @@ app.whenReady().then(() => {
       lastRecordingMode = 'idle'
       
       const trimmedResponse = aiResponse.trim()
-      saveTranscriptionToHistory(trimmedResponse)
+      const wordsIn = (transcription.text ?? '').trim().split(/\s+/).filter(word => word.length > 0).length
+      const wordsOut = trimmedResponse.trim().split(/\s+/).filter(word => word.length > 0).length
+      saveTranscriptionToHistory(trimmedResponse, wordsIn, wordsOut, duration)
       return { text: trimmedResponse }
     }
     
@@ -548,13 +551,17 @@ app.whenReady().then(() => {
       )
       lastRecordingMode = 'idle'
       const trimmed = enhancedText.trim()
-      saveTranscriptionToHistory(trimmed)
+      const wordsIn = (transcription.text ?? '').trim().split(/\s+/).filter(word => word.length > 0).length
+      const wordsOut = trimmed.trim().split(/\s+/).filter(word => word.length > 0).length
+      saveTranscriptionToHistory(trimmed, wordsIn, wordsOut, duration)
       return { text: trimmed }
     }
 
     lastRecordingMode = 'idle'
     const trimmed = (transcription.text ?? '').trim()
-    saveTranscriptionToHistory(trimmed)
+    const wordsIn = trimmed.trim().split(/\s+/).filter(word => word.length > 0).length
+    const wordsOut = trimmed.trim().split(/\s+/).filter(word => word.length > 0).length
+    saveTranscriptionToHistory(trimmed, wordsIn, wordsOut, duration)
     return { text: trimmed }
   })
 

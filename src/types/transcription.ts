@@ -2,8 +2,9 @@ export interface Transcription {
   id: string;
   text: string;
   timestamp: number;
-  wordCount: number;
-  duration?: number; // Recording duration in seconds
+  wordsIn: number;
+  wordsOut: number;
+  duration: number;
 }
 
 export interface TranscriptionStats {
