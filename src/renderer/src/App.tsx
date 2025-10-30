@@ -11,11 +11,13 @@ function MainApp() {
   useEffect(() => {
     if (window.bridge) {
       window.bridge.updatePushToTalkHotkey(settings.pushToTalkHotkey)
+      window.bridge.updateTranscriptionModeHotkey(settings.transcriptionModeHotkey)
       window.bridge.updateAutoMute(settings.autoMute)
     }
     
     if (window.electron?.ipcRenderer) {
       window.electron.ipcRenderer.invoke('settings:update-sound-effects', settings.soundEffects)
+      window.electron.ipcRenderer.invoke('settings:update-smart-transcription', settings.smartTranscription)
     }
   }, [])
 

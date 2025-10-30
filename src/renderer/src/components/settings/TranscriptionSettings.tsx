@@ -14,12 +14,13 @@ interface TranscriptionSettingsProps {
 
 export function TranscriptionSettings({ settings, onUpdateSetting, theme }: TranscriptionSettingsProps) {
   const [showHotkeyDialog, setShowHotkeyDialog] = useState(false)
+  const [showTranscriptionHotkeyDialog, setShowTranscriptionHotkeyDialog] = useState(false)
 
   return (
     <>
       <div>
         <SettingsRow title="Transcription Hotkey" description="Keyboard shortcut to start transcription" theme={theme}>
-          <Button theme={theme}>Option ⌥ + Shift ⇧ + Z</Button>
+          <Button onClick={() => setShowTranscriptionHotkeyDialog(true)} theme={theme}>{settings.transcriptionModeHotkey}</Button>
         </SettingsRow>
 
         <SettingsRow title="Push to Talk Hotkey" description="Hold this key for push-to-talk recording" theme={theme}>
@@ -27,7 +28,12 @@ export function TranscriptionSettings({ settings, onUpdateSetting, theme }: Tran
         </SettingsRow>
 
         <SettingsRow title="Smart Transcription" description="Enhance transcriptions with formatting and emoji conversion" theme={theme}>
-          <Toggle checked={settings.smartTranscription} onChange={(val) => onUpdateSetting('smartTranscription', val)} theme={theme} />
+          <Toggle checked={settings.smartTranscription} onChange={(val) => {
+            onUpdateSetting('smartTranscription', val)
+            if (window.electron?.ipcRenderer) {
+              window.electron.ipcRenderer.invoke('settings:update-smart-transcription', val)
+            }
+          }} theme={theme} />
         </SettingsRow>
 
         <SettingsRow title="Local Transcription" description="Use offline models for transcription" theme={theme}>
@@ -47,6 +53,17 @@ export function TranscriptionSettings({ settings, onUpdateSetting, theme }: Tran
           window.bridge.updatePushToTalkHotkey(hotkey)
         }}
         currentHotkey={settings.pushToTalkHotkey}
+      />
+
+      <HotkeyDialog
+        isOpen={showTranscriptionHotkeyDialog}
+        onClose={() => setShowTranscriptionHotkeyDialog(false)}
+        onSave={(hotkey) => {
+          onUpdateSetting('transcriptionModeHotkey', hotkey)
+          window.bridge.updateTranscriptionModeHotkey(hotkey)
+        }}
+        currentHotkey={settings.transcriptionModeHotkey}
+        title="Press the hotkey you want to use for transcription mode:"
       />
     </>
   )

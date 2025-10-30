@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os'
 import { uIOhook } from 'uiohook-napi'
 import { config } from 'dotenv'
 import Groq from 'groq-sdk'
+import { enhanceTranscription } from './services/llm-enhancer'
 
 config({ path: join(__dirname, '../../.env') })
 
@@ -93,6 +94,8 @@ function findWindowByType(type: 'main' | 'overlay'): BrowserWindow | undefined {
 }
 
 app.whenReady().then(() => {
+  type RecordingMode = 'push-to-talk' | 'transcription' | 'idle'
+
   electronApp.setAppUserModelId('com.electron')
 
   createMainWindow()
@@ -123,8 +126,14 @@ app.whenReady().then(() => {
   let previousVolume = 0
   let autoMuteEnabled = true
   let soundEffectsEnabled = false
-  let currentHotkeyGroups: number[][] = [[56, 3640]]
   let pressedKeys = new Set<number>()
+  let currentRecordingMode: RecordingMode = 'idle'
+  let lastRecordingMode: RecordingMode = 'idle'
+  let pushToTalkKeyGroups: number[][] = [[56, 3640]]
+  let transcriptionModeKeyGroups: number[][] = [[56, 42, 44]]
+  let transcriptionModeActive = false
+  let transcriptionHotkeyPressed = false
+  let smartTranscriptionEnabled = false
 
   const KEY_TO_KEYCODE: Record<string, number[]> = {
     'Cmd ⌘': [3675, 3676],
@@ -204,14 +213,81 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('settings:update-hotkey', async (_evt, hotkey: string) => {
-    currentHotkeyGroups = parseHotkeyToKeyGroups(hotkey)
-    console.log('Updated hotkey groups:', currentHotkeyGroups)
+    pushToTalkKeyGroups = parseHotkeyToKeyGroups(hotkey)
+    console.log('Updated push-to-talk hotkey groups:', pushToTalkKeyGroups)
+  })
+
+  ipcMain.handle('settings:update-transcription-hotkey', async (_evt, hotkey: string) => {
+    transcriptionModeKeyGroups = parseHotkeyToKeyGroups(hotkey)
+    console.log('Updated transcription mode hotkey groups:', transcriptionModeKeyGroups)
+  })
+
+  ipcMain.handle('settings:update-smart-transcription', async (_evt, enabled: boolean) => {
+    smartTranscriptionEnabled = enabled
   })
 
   uIOhook.on('keydown', async (e) => {
     pressedKeys.add(e.keycode)
     
-    if (!recording && areAllKeysPressed(currentHotkeyGroups, pressedKeys)) {
+    if (areAllKeysPressed(transcriptionModeKeyGroups, pressedKeys)) {
+      if (transcriptionHotkeyPressed) {
+        return
+      }
+      
+      transcriptionHotkeyPressed = true
+      
+      if (transcriptionModeActive) {
+        recording = false
+        transcriptionModeActive = false
+        
+        BrowserWindow.getAllWindows().forEach(window => {
+          window.webContents.send('record:stop')
+        })
+        
+        playSound('bing.mp3', 0.1)
+        
+        if (autoMuteEnabled && process.platform === 'darwin') {
+          setMacVolume(previousVolume).catch(error => {
+            console.error('Failed to restore system volume:', error)
+          })
+        }
+        
+        return
+      } else {
+        currentRecordingMode = 'transcription'
+        transcriptionModeActive = true
+        lastRecordingMode = currentRecordingMode
+        recording = true
+        
+        BrowserWindow.getAllWindows().forEach(window => {
+          window.webContents.send('record:start')
+        })
+        
+        playSound('bong.mp3', 0.1)
+        
+        if (autoMuteEnabled && process.platform === 'darwin') {
+          getMacVolume()
+            .then(volume => {
+              previousVolume = volume
+              return setMacVolume(0)
+            })
+            .catch(error => {
+              console.error('Failed to mute system volume:', error)
+            })
+        }
+        
+        return
+      }
+    }
+    
+    if (!recording) {
+      if (areAllKeysPressed(pushToTalkKeyGroups, pressedKeys)) {
+        currentRecordingMode = 'push-to-talk'
+      } else {
+        return
+      }
+      
+      lastRecordingMode = currentRecordingMode
       recording = true
       
       BrowserWindow.getAllWindows().forEach(window => {
@@ -236,7 +312,11 @@ app.whenReady().then(() => {
   uIOhook.on('keyup', async (e) => {
     pressedKeys.delete(e.keycode)
     
-    if (recording && !areAllKeysPressed(currentHotkeyGroups, pressedKeys)) {
+    if (!areAllKeysPressed(transcriptionModeKeyGroups, pressedKeys)) {
+      transcriptionHotkeyPressed = false
+    }
+    
+    if (recording && currentRecordingMode === 'push-to-talk' && !areAllKeysPressed(pushToTalkKeyGroups, pressedKeys)) {
       recording = false
       
       BrowserWindow.getAllWindows().forEach(window => {
@@ -265,14 +345,40 @@ app.whenReady().then(() => {
     const fs = require('fs')
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
-    const transcription = await groq.audio.transcriptions.create({
-      file: fs.createReadStream(file),
-      model: "whisper-large-v3-turbo",
-      temperature: 0,
-      response_format: "verbose_json",
-    })
+    let retries = 3
+    let transcription
+    while (retries > 0) {
+      try {
+        transcription = await groq.audio.transcriptions.create({
+          file: fs.createReadStream(file),
+          model: "whisper-large-v3-turbo",
+          temperature: 0,
+          response_format: "verbose_json",
+        })
+        break
+      } catch (error) {
+        retries--
+        if (retries === 0) {
+          console.error('STT failed after 3 attempts:', error)
+          throw error
+        }
+        console.log(`STT connection failed, retrying... (${retries} attempts left)`)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+    }
 
-    return { text: transcription.text ?? '' }
+    if (lastRecordingMode === 'transcription' && smartTranscriptionEnabled) {
+      const enhancedText = await enhanceTranscription(
+        transcription.text ?? '',
+        undefined,
+        process.env.GROQ_API_KEY
+      )
+      lastRecordingMode = 'idle'
+      return { text: enhancedText.trim() }
+    }
+
+    lastRecordingMode = 'idle'
+    return { text: (transcription.text ?? '').trim() }
   })
 
   ipcMain.handle('stt:paste', async (_evt, { text }: { text: string }) => {
