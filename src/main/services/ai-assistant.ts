@@ -86,7 +86,7 @@ export async function processAssistantRequest({
     const completion = await groq.chat.completions.create({
       model: selectedModel,
       messages: messages as any,
-      temperature: 0.2,
+      temperature: 0.0,
       max_tokens: 2000
     })
 
