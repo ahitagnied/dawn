@@ -3,21 +3,26 @@ import { MainWindow } from './pages/MainWindow'
 import { SettingsPage } from './pages/SettingsPage'
 import { OverlayWindow } from './pages/OverlayWindow'
 import { useSettings } from './hooks/useSettings'
+import { useTranscriptions } from './hooks/useTranscriptions'
 
 function MainApp() {
   const [showSettings, setShowSettings] = useState(false)
   const { settings } = useSettings()
+  useTranscriptions()
 
   useEffect(() => {
     if (window.bridge) {
       window.bridge.updatePushToTalkHotkey(settings.pushToTalkHotkey)
       window.bridge.updateTranscriptionModeHotkey(settings.transcriptionModeHotkey)
       window.bridge.updateAutoMute(settings.autoMute)
+      window.bridge.updateAssistantModeHotkey(settings.assistantModeHotkey)
+      window.bridge.updateAssistantScreenshot(settings.assistantScreenshotEnabled)
     }
     
     if (window.electron?.ipcRenderer) {
       window.electron.ipcRenderer.invoke('settings:update-sound-effects', settings.soundEffects)
       window.electron.ipcRenderer.invoke('settings:update-smart-transcription', settings.smartTranscription)
+      window.electron.ipcRenderer.invoke('settings:update-assistant-mode', settings.assistantModeEnabled)
     }
   }, [])
 
