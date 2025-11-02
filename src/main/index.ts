@@ -81,14 +81,14 @@ function createMainWindow(): void {
   }
 
   mainWindow.center()
-  
+
   mainWindow.on('blur', () => {
     mainWindow.setWindowButtonVisibility(true)
   })
 }
 
 function findWindowByType(type: 'main' | 'overlay'): BrowserWindow | undefined {
-  return BrowserWindow.getAllWindows().find(win =>
+  return BrowserWindow.getAllWindows().find((win) =>
     win.webContents.getURL().includes(`window=${type}`)
   )
 }
@@ -126,7 +126,7 @@ app.whenReady().then(() => {
   let previousVolume = 0
   let autoMuteEnabled = true
   let soundEffectsEnabled = false
-  let pressedKeys = new Set<number>()
+  const pressedKeys = new Set<number>()
   let currentRecordingMode: RecordingMode = 'idle'
   let lastRecordingMode: RecordingMode = 'idle'
   let pushToTalkKeyGroups: number[][] = [[56, 3640]]
@@ -139,7 +139,7 @@ app.whenReady().then(() => {
   let assistantHotkeyPressed = false
   let assistantModeKeyGroups: number[][] = [[56, 42, 31]]
   let assistantScreenshotEnabled = false
-  let assistantModel = 'meta-llama/llama-4-maverick-17b-128e-instruct'
+  const assistantModel = 'meta-llama/llama-4-maverick-17b-128e-instruct'
   let selectedTextBeforeRecording: string | null = null
 
   const KEY_TO_KEYCODE: Record<string, number[]> = {
@@ -176,41 +176,67 @@ app.whenReady().then(() => {
     '↑': [200],
     '↓': [208],
     '←': [203],
-    '→': [205],
+    '→': [205]
   }
 
   const ALPHA_START = 65
   for (let i = 0; i < 26; i++) {
     const letter = String.fromCharCode(ALPHA_START + i)
     const keyCodes: Record<string, number> = {
-      'A': 30, 'B': 48, 'C': 46, 'D': 32, 'E': 18, 'F': 33, 'G': 34, 'H': 35,
-      'I': 23, 'J': 36, 'K': 37, 'L': 38, 'M': 50, 'N': 49, 'O': 24, 'P': 25,
-      'Q': 16, 'R': 19, 'S': 31, 'T': 20, 'U': 22, 'V': 47, 'W': 17, 'X': 45,
-      'Y': 21, 'Z': 44
+      A: 30,
+      B: 48,
+      C: 46,
+      D: 32,
+      E: 18,
+      F: 33,
+      G: 34,
+      H: 35,
+      I: 23,
+      J: 36,
+      K: 37,
+      L: 38,
+      M: 50,
+      N: 49,
+      O: 24,
+      P: 25,
+      Q: 16,
+      R: 19,
+      S: 31,
+      T: 20,
+      U: 22,
+      V: 47,
+      W: 17,
+      X: 45,
+      Y: 21,
+      Z: 44
     }
     KEY_TO_KEYCODE[letter] = [keyCodes[letter]]
   }
 
   const parseHotkeyToKeyGroups = (hotkey: string): number[][] => {
-    const keys = hotkey.split(' + ').map(k => k.trim())
+    const keys = hotkey.split(' + ').map((k) => k.trim())
     const keyGroups: number[][] = []
-    
+
     for (const key of keys) {
       if (KEY_TO_KEYCODE[key]) {
         keyGroups.push(KEY_TO_KEYCODE[key])
       }
     }
-    
+
     return keyGroups.length > 0 ? keyGroups : [[56, 3640]]
   }
 
   const areAllKeysPressed = (keyGroups: number[][], pressedKeys: Set<number>): boolean => {
-    return keyGroups.every(group => group.some(keycode => pressedKeys.has(keycode)))
+    return keyGroups.every((group) => group.some((keycode) => pressedKeys.has(keycode)))
   }
 
   const playSound = (soundFile: string, volume: number = 0.1): void => {
     if (soundEffectsEnabled && process.platform === 'darwin') {
-      execFile('afplay', ['-v', volume.toString(), join(__dirname, '../../resources', soundFile)], () => {})
+      execFile(
+        'afplay',
+        ['-v', volume.toString(), join(__dirname, '../../resources', soundFile)],
+        () => {}
+      )
     }
   }
 
@@ -234,7 +260,7 @@ app.whenReady().then(() => {
 
   const detectEditingMode = async (): Promise<{ isEditing: boolean; selectedText: string }> => {
     const originalClipboard = clipboard.readText()
-    
+
     await new Promise<void>((resolve, reject) => {
       execFile(
         'osascript',
@@ -242,15 +268,15 @@ app.whenReady().then(() => {
         (err) => (err ? reject(err) : resolve())
       )
     })
-    
-    await new Promise(resolve => setTimeout(resolve, 150))
-    
+
+    await new Promise((resolve) => setTimeout(resolve, 150))
+
     const clipboardText = clipboard.readText()
     const isEditing = clipboardText.length > 0 && clipboardText !== originalClipboard
-    
-    return { 
-      isEditing, 
-      selectedText: isEditing ? clipboardText : '' 
+
+    return {
+      isEditing,
+      selectedText: isEditing ? clipboardText : ''
     }
   }
 
@@ -258,22 +284,22 @@ app.whenReady().then(() => {
     if (!assistantScreenshotEnabled) {
       return null
     }
-    
+
     try {
       const screenshotPath = join(tmpdir(), `screenshot-${Date.now()}.png`)
-      
+
       await new Promise<void>((resolve, reject) => {
         execFile('screencapture', ['-x', screenshotPath], (err) => {
           if (err) return reject(err)
           resolve()
         })
       })
-      
-      const fs = require('fs')
+
+      const fs = await import('fs')
       const imageBuffer = fs.readFileSync(screenshotPath)
       const base64Image = imageBuffer.toString('base64')
       fs.unlinkSync(screenshotPath)
-      
+
       return `data:image/png;base64,${base64Image}`
     } catch (error) {
       console.error('Screenshot capture failed:', error)
@@ -281,7 +307,12 @@ app.whenReady().then(() => {
     }
   }
 
-  const saveTranscriptionToHistory = (text: string, wordsIn: number, wordsOut: number, duration: number) => {
+  const saveTranscriptionToHistory = (
+    text: string,
+    wordsIn: number,
+    wordsOut: number,
+    duration: number
+  ) => {
     const mainWindow = findWindowByType('main')
     if (mainWindow) {
       mainWindow.webContents.send('transcription:add', {
@@ -332,143 +363,150 @@ app.whenReady().then(() => {
     console.log('Updated assistant mode enabled:', assistantModeEnabled)
   })
 
+  ipcMain.handle('settings:update-input-device', async (_evt, deviceId: string) => {
+    console.log('Updated input device:', deviceId)
+  })
+
   uIOhook.on('keydown', async (e) => {
     pressedKeys.add(e.keycode)
-    
+
     if (assistantModeEnabled && areAllKeysPressed(assistantModeKeyGroups, pressedKeys)) {
       if (assistantHotkeyPressed) {
         return
       }
-      
+
       assistantHotkeyPressed = true
-      
+
       if (assistantModeActive) {
         recording = false
         assistantModeActive = false
-        
-        BrowserWindow.getAllWindows().forEach(window => {
+
+        BrowserWindow.getAllWindows().forEach((window) => {
           window.webContents.send('record:stop')
         })
-        
+
         playSound('bing.mp3', 0.1)
-        
+
         if (autoMuteEnabled && process.platform === 'darwin') {
-          setMacVolume(previousVolume).catch(error => {
+          setMacVolume(previousVolume).catch((error) => {
             console.error('Failed to restore system volume:', error)
           })
         }
-        
+
         return
       } else {
         currentRecordingMode = 'assistant'
         assistantModeActive = true
         lastRecordingMode = currentRecordingMode
         recording = true
-        
+
         try {
           const context = await detectEditingMode()
           selectedTextBeforeRecording = context.isEditing ? context.selectedText : null
-          console.log('Assistant mode context:', { isEditing: context.isEditing, textLength: context.selectedText.length })
+          console.log('Assistant mode context:', {
+            isEditing: context.isEditing,
+            textLength: context.selectedText.length
+          })
         } catch (error) {
           console.error('Failed to detect editing mode:', error)
           selectedTextBeforeRecording = null
         }
-        
-        BrowserWindow.getAllWindows().forEach(window => {
+
+        BrowserWindow.getAllWindows().forEach((window) => {
           window.webContents.send('record:start')
         })
-        
+
         playSound('bong.mp3', 0.1)
-        
+
         if (autoMuteEnabled && process.platform === 'darwin') {
           getMacVolume()
-            .then(volume => {
+            .then((volume) => {
               previousVolume = volume
               return setMacVolume(0)
             })
-            .catch(error => {
+            .catch((error) => {
               console.error('Failed to mute system volume:', error)
             })
         }
-        
+
         return
       }
     }
-    
+
     if (areAllKeysPressed(transcriptionModeKeyGroups, pressedKeys)) {
       if (transcriptionHotkeyPressed) {
         return
       }
-      
+
       transcriptionHotkeyPressed = true
-      
+
       if (transcriptionModeActive) {
         recording = false
         transcriptionModeActive = false
-        
-        BrowserWindow.getAllWindows().forEach(window => {
+
+        BrowserWindow.getAllWindows().forEach((window) => {
           window.webContents.send('record:stop')
         })
-        
+
         playSound('bing.mp3', 0.1)
-        
+
         if (autoMuteEnabled && process.platform === 'darwin') {
-          setMacVolume(previousVolume).catch(error => {
+          setMacVolume(previousVolume).catch((error) => {
             console.error('Failed to restore system volume:', error)
           })
         }
-        
+
         return
       } else {
         currentRecordingMode = 'transcription'
         transcriptionModeActive = true
         lastRecordingMode = currentRecordingMode
         recording = true
-        
-        BrowserWindow.getAllWindows().forEach(window => {
+
+        BrowserWindow.getAllWindows().forEach((window) => {
           window.webContents.send('record:start')
         })
-        
+
         playSound('bong.mp3', 0.1)
-        
+
         if (autoMuteEnabled && process.platform === 'darwin') {
           getMacVolume()
-            .then(volume => {
+            .then((volume) => {
               previousVolume = volume
               return setMacVolume(0)
             })
-            .catch(error => {
+            .catch((error) => {
               console.error('Failed to mute system volume:', error)
             })
         }
-        
+
         return
       }
     }
-    
+
     if (!recording) {
       if (areAllKeysPressed(pushToTalkKeyGroups, pressedKeys)) {
         currentRecordingMode = 'push-to-talk'
       } else {
         return
       }
-      
+
       lastRecordingMode = currentRecordingMode
       recording = true
-      
-      BrowserWindow.getAllWindows().forEach(window => {
+
+      BrowserWindow.getAllWindows().forEach((window) => {
         window.webContents.send('record:start')
       })
-      
+
       playSound('bong.mp3', 0.1)
-      
+
       if (autoMuteEnabled && process.platform === 'darwin') {
         getMacVolume()
-          .then(volume => {
+          .then((volume) => {
             previousVolume = volume
             return setMacVolume(0)
           })
-          .catch(error => {
+          .catch((error) => {
             console.error('Failed to mute system volume:', error)
           })
       }
@@ -477,114 +515,138 @@ app.whenReady().then(() => {
 
   uIOhook.on('keyup', async (e) => {
     pressedKeys.delete(e.keycode)
-    
+
     if (!areAllKeysPressed(assistantModeKeyGroups, pressedKeys)) {
       assistantHotkeyPressed = false
     }
-    
+
     if (!areAllKeysPressed(transcriptionModeKeyGroups, pressedKeys)) {
       transcriptionHotkeyPressed = false
     }
-    
-    if (recording && currentRecordingMode === 'push-to-talk' && !areAllKeysPressed(pushToTalkKeyGroups, pressedKeys)) {
+
+    if (
+      recording &&
+      currentRecordingMode === 'push-to-talk' &&
+      !areAllKeysPressed(pushToTalkKeyGroups, pressedKeys)
+    ) {
       recording = false
-      
-      BrowserWindow.getAllWindows().forEach(window => {
+
+      BrowserWindow.getAllWindows().forEach((window) => {
         window.webContents.send('record:stop')
       })
-      
+
       playSound('bing.mp3', 0.1)
-      
+
       if (autoMuteEnabled && process.platform === 'darwin') {
-        setMacVolume(previousVolume)
-          .catch(error => {
-            console.error('Failed to restore system volume:', error)
-          })
+        setMacVolume(previousVolume).catch((error) => {
+          console.error('Failed to restore system volume:', error)
+        })
       }
     }
   })
 
   uIOhook.start()
 
-  ipcMain.handle('stt:transcribe', async (_evt, { mime, buf, duration }: { mime: string; buf: ArrayBuffer; duration: number }) => {
-    const dir = mkdtempSync(join(tmpdir(), 'stt-'))
-    const ext = mime.includes('webm') ? 'webm' : 'wav'
-    const file = join(dir, `audio.${ext}`)
-    writeFileSync(file, Buffer.from(buf))
+  ipcMain.handle(
+    'stt:transcribe',
+    async (_evt, { mime, buf, duration }: { mime: string; buf: ArrayBuffer; duration: number }) => {
+      const dir = mkdtempSync(join(tmpdir(), 'stt-'))
+      const ext = mime.includes('webm') ? 'webm' : 'wav'
+      const file = join(dir, `audio.${ext}`)
+      writeFileSync(file, Buffer.from(buf))
 
-    const fs = require('fs')
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+      const fs = await import('fs')
+      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
-    let retries = 3
-    let transcription
-    while (retries > 0) {
-      try {
-        transcription = await groq.audio.transcriptions.create({
-          file: fs.createReadStream(file),
-          model: "whisper-large-v3-turbo",
-          temperature: 0,
-          response_format: "verbose_json",
-        })
-        break
-      } catch (error) {
-        retries--
-        if (retries === 0) {
-          console.error('STT failed after 3 attempts:', error)
-          throw error
+      let retries = 3
+      let transcription
+      while (retries > 0) {
+        try {
+          transcription = await groq.audio.transcriptions.create({
+            file: fs.createReadStream(file),
+            model: 'whisper-large-v3-turbo',
+            temperature: 0,
+            response_format: 'verbose_json'
+          })
+          break
+        } catch (error) {
+          retries--
+          if (retries === 0) {
+            console.error('STT failed after 3 attempts:', error)
+            throw error
+          }
+          console.log(`STT connection failed, retrying... (${retries} attempts left)`)
+          await new Promise((resolve) => setTimeout(resolve, 1000))
         }
-        console.log(`STT connection failed, retrying... (${retries} attempts left)`)
-        await new Promise(resolve => setTimeout(resolve, 1000))
       }
-    }
 
-    if (lastRecordingMode === 'assistant') {
-      let screenshot: string | null = null
-      
-      if (assistantScreenshotEnabled) {
-        screenshot = await captureScreenshot()
-        console.log('Screenshot captured:', screenshot ? 'yes' : 'no')
+      if (lastRecordingMode === 'assistant') {
+        let screenshot: string | null = null
+
+        if (assistantScreenshotEnabled) {
+          screenshot = await captureScreenshot()
+          console.log('Screenshot captured:', screenshot ? 'yes' : 'no')
+        }
+
+        const { processAssistantRequest } = await import('./services/ai-assistant')
+        const aiResponse = await processAssistantRequest({
+          instructions: transcription.text ?? '',
+          selectedText: selectedTextBeforeRecording,
+          screenshot: screenshot,
+          model: assistantModel,
+          apiKey: process.env.GROQ_API_KEY
+        })
+
+        selectedTextBeforeRecording = null
+        lastRecordingMode = 'idle'
+
+        const trimmedResponse = aiResponse.trim()
+        const wordsIn = (transcription.text ?? '')
+          .trim()
+          .split(/\s+/)
+          .filter((word) => word.length > 0).length
+        const wordsOut = trimmedResponse
+          .trim()
+          .split(/\s+/)
+          .filter((word) => word.length > 0).length
+        saveTranscriptionToHistory(trimmedResponse, wordsIn, wordsOut, duration)
+        return { text: trimmedResponse }
       }
-      
-      const { processAssistantRequest } = await import('./services/ai-assistant')
-      const aiResponse = await processAssistantRequest({
-        instructions: transcription.text ?? '',
-        selectedText: selectedTextBeforeRecording,
-        screenshot: screenshot,
-        model: assistantModel,
-        apiKey: process.env.GROQ_API_KEY
-      })
-      
-      selectedTextBeforeRecording = null
+
+      if (lastRecordingMode === 'transcription' && smartTranscriptionEnabled) {
+        const enhancedText = await enhanceTranscription(
+          transcription.text ?? '',
+          undefined,
+          process.env.GROQ_API_KEY
+        )
+        lastRecordingMode = 'idle'
+        const trimmed = enhancedText.trim()
+        const wordsIn = (transcription.text ?? '')
+          .trim()
+          .split(/\s+/)
+          .filter((word) => word.length > 0).length
+        const wordsOut = trimmed
+          .trim()
+          .split(/\s+/)
+          .filter((word) => word.length > 0).length
+        saveTranscriptionToHistory(trimmed, wordsIn, wordsOut, duration)
+        return { text: trimmed }
+      }
+
       lastRecordingMode = 'idle'
-      
-      const trimmedResponse = aiResponse.trim()
-      const wordsIn = (transcription.text ?? '').trim().split(/\s+/).filter(word => word.length > 0).length
-      const wordsOut = trimmedResponse.trim().split(/\s+/).filter(word => word.length > 0).length
-      saveTranscriptionToHistory(trimmedResponse, wordsIn, wordsOut, duration)
-      return { text: trimmedResponse }
-    }
-    
-    if (lastRecordingMode === 'transcription' && smartTranscriptionEnabled) {
-      const enhancedText = await enhanceTranscription(
-        transcription.text ?? '',
-        undefined,
-        process.env.GROQ_API_KEY
-      )
-      lastRecordingMode = 'idle'
-      const trimmed = enhancedText.trim()
-      const wordsIn = (transcription.text ?? '').trim().split(/\s+/).filter(word => word.length > 0).length
-      const wordsOut = trimmed.trim().split(/\s+/).filter(word => word.length > 0).length
+      const trimmed = (transcription.text ?? '').trim()
+      const wordsIn = trimmed
+        .trim()
+        .split(/\s+/)
+        .filter((word) => word.length > 0).length
+      const wordsOut = trimmed
+        .trim()
+        .split(/\s+/)
+        .filter((word) => word.length > 0).length
       saveTranscriptionToHistory(trimmed, wordsIn, wordsOut, duration)
       return { text: trimmed }
     }
-
-    lastRecordingMode = 'idle'
-    const trimmed = (transcription.text ?? '').trim()
-    const wordsIn = trimmed.trim().split(/\s+/).filter(word => word.length > 0).length
-    const wordsOut = trimmed.trim().split(/\s+/).filter(word => word.length > 0).length
-    saveTranscriptionToHistory(trimmed, wordsIn, wordsOut, duration)
-    return { text: trimmed }
-  })
+  )
 
   ipcMain.handle('stt:paste', async (_evt, { text }: { text: string }) => {
     if (!text) return false
@@ -600,7 +662,6 @@ app.whenReady().then(() => {
 
     return true
   })
-
 
   app.on('activate', () => {
     if (!findWindowByType('overlay')) createOverlayWindow()
@@ -619,7 +680,9 @@ app.on('will-quit', () => {
   uIOhook.removeAllListeners()
   try {
     uIOhook.stop()
-  } catch {}
+  } catch {
+    /* empty */
+  }
 })
 
 app.on('window-all-closed', () => {

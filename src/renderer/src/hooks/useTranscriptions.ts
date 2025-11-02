@@ -9,18 +9,32 @@ const toNumber = (value: unknown): number => {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-const normalizeTranscription = (raw: any): Transcription => {
+type RawTranscription = {
+  id?: unknown
+  text?: unknown
+  timestamp?: unknown
+  wordsIn?: unknown
+  wordsOut?: unknown
+  duration?: unknown
+}
+
+// Transcription from the main process
+const normalizeTranscription = (raw: RawTranscription): Transcription => {
   return {
-    id: typeof raw?.id === 'string' ? raw.id : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+    id:
+      typeof raw?.id === 'string'
+        ? raw.id
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
     text: typeof raw?.text === 'string' ? raw.text : '',
     timestamp: typeof raw?.timestamp === 'number' ? raw.timestamp : Date.now(),
     wordsIn: toNumber(raw?.wordsIn),
     wordsOut: toNumber(raw?.wordsOut),
-    duration: toNumber(raw?.duration),
+    duration: toNumber(raw?.duration)
   }
 }
 
-export function useTranscriptions() {
+// Transcriptions from the renderer process
+export function useTranscriptions(): { transcriptions: Transcription[] } {
   const [transcriptions, setTranscriptions] = useState<Transcription[]>(() => {
     const saved = localStorage.getItem(TRANSCRIPTIONS_STORAGE_KEY)
     if (!saved) return []
@@ -40,7 +54,7 @@ export function useTranscriptions() {
 
   useEffect(() => {
     const unsubscribe = window.bridge?.onTranscriptionAdd?.((transcription) => {
-      setTranscriptions(prev => [normalizeTranscription(transcription), ...prev])
+      setTranscriptions((prev) => [normalizeTranscription(transcription), ...prev])
     })
     return unsubscribe
   }, [])

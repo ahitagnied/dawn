@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { useSettings } from '../hooks/useSettings'
 
 const IDLE_WIDTH = 40
 const IDLE_HEIGHT = 8
@@ -10,6 +11,7 @@ const WAVEFORM_BAR_MAX_HEIGHT = 15
 const WAVEFORM_GAP = 1.5
 
 export function OverlayWindow() {
+  const { settings } = useSettings()
   const [recording, setRecording] = useState(false)
   const [audioLevels, setAudioLevels] = useState(Array(WAVEFORM_BAR_COUNT).fill(0))
 
@@ -21,23 +23,43 @@ export function OverlayWindow() {
   const animationRef = useRef<number | null>(null)
   const recordingStartTimeRef = useRef<number | null>(null)
 
-  useEffect(() => {
-    const offStart = window.bridge?.onRecordStart?.(startRecording)
-    const offStop = window.bridge?.onRecordStop?.(stopRecording)
-    return () => {
-      offStart?.()
-      offStop?.()
-    }
-  }, [])
-
-  async function startRecording() {
+  const startRecording = useCallback(async () => {
+    console.log('startRecording called with device:', settings.inputDevice)
     if (recordingRef.current) return
 
     recordingRef.current = true
     recordingStartTimeRef.current = Date.now()
     setRecording(true)
 
-    streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true })
+    try {
+      // Always read the latest settings directly from localStorage
+      const savedSettings = localStorage.getItem('dawn-settings')
+      const currentSettings = savedSettings ? JSON.parse(savedSettings) : {}
+      const currentDevice = currentSettings.inputDevice || 'default'
+      
+      console.log('Using device from localStorage:', currentDevice)
+      
+      // Use the selected input device from settings
+      const audioConstraints: MediaStreamConstraints = {
+        audio: currentDevice === 'default' 
+          ? true 
+          : { deviceId: { exact: currentDevice } }
+      }
+      
+      streamRef.current = await navigator.mediaDevices.getUserMedia(audioConstraints)
+    } catch (error) {
+      console.error('Failed to get audio stream with selected device, falling back to default:', error)
+      
+      // Fallback to default device if the selected device is not available
+      try {
+        streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true })
+      } catch (fallbackError) {
+        console.error('Failed to get any audio stream:', fallbackError)
+        recordingRef.current = false
+        setRecording(false)
+        return
+      }
+    }
 
     const audioContext = new AudioContext()
     const source = audioContext.createMediaStreamSource(streamRef.current)
@@ -62,7 +84,7 @@ export function OverlayWindow() {
     rec.ondataavailable = (e) => e.data && e.data.size && chunksRef.current.push(e.data)
     recRef.current = rec
     rec.start()
-  }
+  }, []) // No dependencies needed since we read from localStorage
 
   async function stopRecording() {
     if (!recordingRef.current) return
@@ -98,6 +120,17 @@ export function OverlayWindow() {
       console.error('[renderer] transcription/paste failed', err)
     }
   }
+
+  useEffect(() => {
+    console.log('Setting up event listeners')
+    const offStart = window.bridge?.onRecordStart?.(startRecording)
+    const offStop = window.bridge?.onRecordStop?.(stopRecording)
+    return () => {
+      console.log('Cleaning up event listeners')
+      offStart?.()
+      offStop?.()
+    }
+  }, []) // Only run once on mount
 
   return (
     <div style={{ 

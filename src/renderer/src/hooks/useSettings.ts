@@ -15,6 +15,7 @@ export interface Settings {
   assistantModel: string
   autoCopy: boolean
   pressEnterAfter: boolean
+  inputDevice: string
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -32,6 +33,7 @@ const DEFAULT_SETTINGS: Settings = {
   assistantModel: 'meta-llama/llama-4-maverick-17b-128e-instruct',
   autoCopy: true,
   pressEnterAfter: false,
+  inputDevice: 'default'
 }
 
 const SETTINGS_STORAGE_KEY = 'dawn-settings'

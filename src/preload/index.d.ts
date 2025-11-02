@@ -12,6 +12,7 @@ interface Bridge {
   updateTranscriptionModeHotkey(hotkey: string): Promise<void>
   updateAssistantModeHotkey(hotkey: string): Promise<void>
   updateAssistantScreenshot(enabled: boolean): Promise<void>
+  updateInputDevice(deviceId: string): Promise<void>
 }
 
 declare global {

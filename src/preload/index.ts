@@ -38,6 +38,9 @@ const bridge = {
   },
   updateAssistantScreenshot(enabled: boolean) {
     return ipcRenderer.invoke('settings:update-assistant-screenshot', enabled)
+  },
+  updateInputDevice(deviceId: string) {
+    return ipcRenderer.invoke('settings:update-input-device', deviceId)
   }
 }
 
