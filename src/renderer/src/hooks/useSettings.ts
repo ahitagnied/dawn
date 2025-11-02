@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react'
 
+export interface PhrasePair {
+  id: string
+  original: string
+  replacement: string
+}
+
 export interface Settings {
   soundEffects: boolean
   autoMute: boolean
@@ -16,6 +22,7 @@ export interface Settings {
   autoCopy: boolean
   pressEnterAfter: boolean
   inputDevice: string
+  phraseReplacements: PhrasePair[]
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -33,7 +40,8 @@ const DEFAULT_SETTINGS: Settings = {
   assistantModel: 'meta-llama/llama-4-maverick-17b-128e-instruct',
   autoCopy: true,
   pressEnterAfter: false,
-  inputDevice: 'default'
+  inputDevice: 'default',
+  phraseReplacements: []
 }
 
 const SETTINGS_STORAGE_KEY = 'dawn-settings'

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useSettings } from '../hooks/useSettings'
+import { useSettings, PhrasePair } from '../hooks/useSettings'
 
 const IDLE_WIDTH = 40
 const IDLE_HEIGHT = 8
@@ -9,6 +9,21 @@ const WAVEFORM_BAR_COUNT = 13
 const WAVEFORM_BAR_WIDTH = 2.5
 const WAVEFORM_BAR_MAX_HEIGHT = 15
 const WAVEFORM_GAP = 1.5
+
+// Apply phrase replacements to transcription text
+const applyPhraseReplacements = (text: string, phraseReplacements: PhrasePair[]): string => {
+  if (!phraseReplacements || phraseReplacements.length === 0) {
+    return text
+  }
+
+  let result = text
+  phraseReplacements.forEach(phrase => {
+    // Use global, case-insensitive replacement
+    const regex = new RegExp(phrase.original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
+    result = result.replace(regex, phrase.replacement)
+  })
+  return result
+}
 
 export function OverlayWindow() {
   const { settings } = useSettings()
@@ -114,8 +129,19 @@ export function OverlayWindow() {
       chunksRef.current = []
       const buf = await blob.arrayBuffer()
       const res = await window.bridge.transcribe(blob.type, buf, duration)
-      const text = res?.text || ''
-      await window.bridge.pasteText(text)
+      const originalText = res?.text || ''
+      
+      // Get the latest settings from localStorage to ensure we have current phrase replacements
+      const savedSettings = localStorage.getItem('dawn-settings')
+      const currentSettings = savedSettings ? JSON.parse(savedSettings) : {}
+      const currentPhraseReplacements = currentSettings.phraseReplacements || []
+      
+      // Apply phrase replacements to the transcribed text
+      const processedText = applyPhraseReplacements(originalText, currentPhraseReplacements)
+      
+      console.log('Phrase replacement in paste:', { originalText, processedText, phraseReplacements: currentPhraseReplacements })
+      
+      await window.bridge.pasteText(processedText)
     } catch (err) {
       console.error('[renderer] transcription/paste failed', err)
     }

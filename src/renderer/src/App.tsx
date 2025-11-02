@@ -8,7 +8,9 @@ import { useTranscriptions } from './hooks/useTranscriptions'
 function MainApp() {
   const [showSettings, setShowSettings] = useState(false)
   const { settings } = useSettings()
-  useTranscriptions()
+  console.log('App settings:', settings)
+  console.log('Phrase replacements:', settings.phraseReplacements)
+  useTranscriptions(settings.phraseReplacements)
 
   useEffect(() => {
     if (window.bridge) {

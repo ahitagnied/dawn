@@ -1,9 +1,10 @@
 import { SettingsRow } from '../ui/SettingsRow'
 import { Toggle } from '../ui/Toggle'
 import { Button } from '../ui/Button'
-import { Settings } from '../../hooks/useSettings'
+import { Settings, PhrasePair } from '../../hooks/useSettings'
 import { Theme } from '../../utils/theme'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { PhraseReplacementDialog } from '../ui/PhraseReplacementDialog'
 
 interface OutputSettingsProps {
   settings: Settings
@@ -12,6 +13,8 @@ interface OutputSettingsProps {
 }
 
 export function OutputSettings({ settings, onUpdateSetting, theme }: OutputSettingsProps) {
+  const [isPhraseDialogOpen, setIsPhraseDialogOpen] = useState(false)
+
   // Sync settings to main process on component mount
   useEffect(() => {
     if (window.bridge?.syncSettings) {
@@ -36,6 +39,18 @@ export function OutputSettings({ settings, onUpdateSetting, theme }: OutputSetti
     }
   }
 
+  const handleManagePhrases = () => {
+    setIsPhraseDialogOpen(true)
+  }
+
+  const handlePhraseDialogClose = () => {
+    setIsPhraseDialogOpen(false)
+  }
+
+  const handlePhraseDialogSave = (phrases: PhrasePair[]) => {
+    onUpdateSetting('phraseReplacements', phrases)
+  }
+
   return (
     <>
       <div>
@@ -55,10 +70,18 @@ export function OutputSettings({ settings, onUpdateSetting, theme }: OutputSetti
           <Button theme={theme}>Manage Words</Button>
         </SettingsRow>
 
-        <SettingsRow title="Phrase Replacements" description="Replace phrases in transcriptions (0 rules)" theme={theme}>
-          <Button theme={theme}>Manage Phrases</Button>
+        <SettingsRow title="Phrase Replacements" description={`Replace phrases in transcriptions (${settings.phraseReplacements?.length || 0} rules)`} theme={theme}>
+          <Button theme={theme} onClick={handleManagePhrases}>Manage Phrases</Button>
         </SettingsRow>
       </div>
+
+      <PhraseReplacementDialog
+        isOpen={isPhraseDialogOpen}
+        onClose={handlePhraseDialogClose}
+        onSave={handlePhraseDialogSave}
+        currentPhrases={settings.phraseReplacements || []}
+        theme={theme}
+      />
     </>
   )
 }
