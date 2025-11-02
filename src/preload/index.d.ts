@@ -13,6 +13,10 @@ interface Bridge {
   updateAssistantModeHotkey(hotkey: string): Promise<void>
   updateAssistantScreenshot(enabled: boolean): Promise<void>
   updateInputDevice(deviceId: string): Promise<void>
+  getSettings(): Promise<{ autoCopy: boolean; pressEnterAfter: boolean }>
+  updateAutoCopy(enabled: boolean): Promise<void>
+  updatePressEnterAfter(enabled: boolean): Promise<void>
+  syncSettings(settings: { autoCopy: boolean; pressEnterAfter: boolean }): Promise<void>
 }
 
 declare global {

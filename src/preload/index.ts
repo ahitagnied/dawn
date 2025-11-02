@@ -41,6 +41,18 @@ const bridge = {
   },
   updateInputDevice(deviceId: string) {
     return ipcRenderer.invoke('settings:update-input-device', deviceId)
+  },
+  getSettings() {
+    return ipcRenderer.invoke('settings:get')
+  },
+  updateAutoCopy(enabled: boolean) {
+    return ipcRenderer.invoke('settings:update-auto-copy', enabled)
+  },
+  updatePressEnterAfter(enabled: boolean) {
+    return ipcRenderer.invoke('settings:update-press-enter-after', enabled)
+  },
+  syncSettings(settings: { autoCopy: boolean; pressEnterAfter: boolean }) {
+    return ipcRenderer.invoke('settings:sync', settings)
   }
 }
 

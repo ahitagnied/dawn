@@ -141,6 +141,8 @@ app.whenReady().then(() => {
   let assistantScreenshotEnabled = false
   const assistantModel = 'meta-llama/llama-4-maverick-17b-128e-instruct'
   let selectedTextBeforeRecording: string | null = null
+  let autoCopyEnabled = true
+  let pressEnterAfterEnabled = false
 
   const KEY_TO_KEYCODE: Record<string, number[]> = {
     'Cmd ⌘': [3675, 3676],
@@ -365,6 +367,30 @@ app.whenReady().then(() => {
 
   ipcMain.handle('settings:update-input-device', async (_evt, deviceId: string) => {
     console.log('Updated input device:', deviceId)
+  })
+
+  ipcMain.handle('settings:get', async () => {
+    return {
+      autoCopy: autoCopyEnabled,
+      pressEnterAfter: pressEnterAfterEnabled
+    }
+  })
+
+  ipcMain.handle('settings:update-auto-copy', async (_evt, enabled: boolean) => {
+    autoCopyEnabled = enabled
+    console.log('Updated auto copy enabled:', autoCopyEnabled)
+  })
+
+  ipcMain.handle('settings:update-press-enter-after', async (_evt, enabled: boolean) => {
+    pressEnterAfterEnabled = enabled
+    console.log('Updated press enter after enabled:', pressEnterAfterEnabled)
+  })
+
+  // Sync settings from renderer to main process
+  ipcMain.handle('settings:sync', async (_evt, settings: { autoCopy: boolean; pressEnterAfter: boolean }) => {
+    autoCopyEnabled = settings.autoCopy
+    pressEnterAfterEnabled = settings.pressEnterAfter
+    console.log('Synced settings from renderer:', { autoCopy: autoCopyEnabled, pressEnterAfter: pressEnterAfterEnabled })
   })
 
   uIOhook.on('keydown', async (e) => {
@@ -650,8 +676,11 @@ app.whenReady().then(() => {
 
   ipcMain.handle('stt:paste', async (_evt, { text }: { text: string }) => {
     if (!text) return false
+    // Save current clipboard content before overwriting it
+    const previousClipboardContent = clipboard.readText()
     clipboard.writeText(text)
 
+    // Simulate paste command
     await new Promise<void>((resolve, reject) => {
       execFile(
         'osascript',
@@ -659,6 +688,29 @@ app.whenReady().then(() => {
         (err) => (err ? reject(err) : resolve())
       )
     })
+
+    // Press Enter after paste if enabled
+    if (pressEnterAfterEnabled) {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 100) // Small delay between paste and enter
+      })
+      await new Promise<void>((resolve, reject) => {
+        execFile(
+          'osascript',
+          ['-e', 'tell application "System Events" to keystroke return'],
+          (err) => (err ? reject(err) : resolve())
+        )
+      })
+    }
+
+    // Clear clipboard if auto copy is disabled, but restore previous content
+    if (!autoCopyEnabled) {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 500) // Wait for paste to complete before clearing
+      })
+      // Restore the previous clipboard content instead of clearing it
+      clipboard.writeText(previousClipboardContent)
+    }
 
     return true
   })

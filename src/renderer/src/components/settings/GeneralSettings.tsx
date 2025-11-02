@@ -22,9 +22,12 @@ export function GeneralSettings({ settings, onUpdateSetting, theme }: GeneralSet
     if (selectedDeviceName === 'Default' && settings.inputDevice !== 'default') {
       // Try to get device label without requesting microphone access
       // This will only work if we already have permission
-      navigator.mediaDevices.enumerateDevices()
-        .then(deviceList => {
-          const device = deviceList.find(d => d.deviceId === settings.inputDevice && d.kind === 'audioinput')
+      navigator.mediaDevices
+        .enumerateDevices()
+        .then((deviceList) => {
+          const device = deviceList.find(
+            (d) => d.deviceId === settings.inputDevice && d.kind === 'audioinput'
+          )
           if (device?.label) {
             setSelectedDeviceName(device.label)
           }
@@ -58,7 +61,7 @@ export function GeneralSettings({ settings, onUpdateSetting, theme }: GeneralSet
     if (window.bridge?.updateInputDevice) {
       window.bridge.updateInputDevice(deviceId)
     }
-    
+
     // Update the displayed device name immediately
     setSelectedDeviceName(deviceLabel)
   }
@@ -66,32 +69,54 @@ export function GeneralSettings({ settings, onUpdateSetting, theme }: GeneralSet
   return (
     <>
       <div>
-        <SettingsRow title="Sound Effects" description="Play audio feedback for recording and typing" theme={theme}>
-          <Toggle checked={settings.soundEffects} onChange={handleSoundEffectsChange} theme={theme} />
+        <SettingsRow
+          title="Sound Effects"
+          description="Play audio feedback for recording and typing"
+          theme={theme}
+        >
+          <Toggle
+            checked={settings.soundEffects}
+            onChange={handleSoundEffectsChange}
+            theme={theme}
+          />
         </SettingsRow>
 
-        <SettingsRow title="Auto-Mute System" description="Mute system volume during recording" theme={theme}>
+        <SettingsRow
+          title="Auto-Mute System"
+          description="Mute system volume during recording"
+          theme={theme}
+        >
           <Toggle checked={settings.autoMute} onChange={handleAutoMuteChange} theme={theme} />
         </SettingsRow>
 
         <SettingsRow title="Dark Mode" description="Use dark theme for the interface" theme={theme}>
-          <Toggle checked={settings.darkMode} onChange={(val) => onUpdateSetting('darkMode', val)} theme={theme} />
+          <Toggle
+            checked={settings.darkMode}
+            onChange={(val) => onUpdateSetting('darkMode', val)}
+            theme={theme}
+          />
         </SettingsRow>
 
         <SettingsRow title="API Key" description="Configure your Groq API key" theme={theme}>
           <Button theme={theme}>Set Key</Button>
         </SettingsRow>
 
-        <SettingsRow title="Input Device" description="Select microphone for recording" theme={theme}>
-          <Button theme={theme} onClick={handleInputDeviceClick}>{selectedDeviceName}</Button>
+        <SettingsRow
+          title="Input Device"
+          description="Select microphone for recording"
+          theme={theme}
+        >
+          <Button theme={theme} onClick={handleInputDeviceClick}>
+            {selectedDeviceName}
+          </Button>
         </SettingsRow>
 
-        <SettingsRow title="Data Location" description="Access your app data and recordings" theme={theme}>
+        <SettingsRow
+          title="Data Location"
+          description="Access your app data and recordings"
+          theme={theme}
+        >
           <Button theme={theme}>Open Folder</Button>
-        </SettingsRow>
-
-        <SettingsRow title="App Updates" description="Check for the latest version" theme={theme}>
-          <Button theme={theme}>Check Updates</Button>
         </SettingsRow>
       </div>
 
@@ -105,4 +130,3 @@ export function GeneralSettings({ settings, onUpdateSetting, theme }: GeneralSet
     </>
   )
 }
-
