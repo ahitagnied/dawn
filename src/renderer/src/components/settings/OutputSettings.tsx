@@ -54,24 +54,50 @@ export function OutputSettings({ settings, onUpdateSetting, theme }: OutputSetti
   return (
     <>
       <div>
-        <SettingsRow title="Auto Copy" description="Keep transcriptions in clipboard after pasting" theme={theme}>
+        <SettingsRow
+          title="Auto Copy"
+          description="Keep transcriptions in clipboard after pasting"
+          theme={theme}
+        >
           <Toggle checked={settings.autoCopy} onChange={handleAutoCopyChange} theme={theme} />
         </SettingsRow>
 
-        <SettingsRow title="Press Enter After" description="Press Enter key automatically after pasting" theme={theme}>
-          <Toggle checked={settings.pressEnterAfter} onChange={handlePressEnterAfterChange} theme={theme} />
+        <SettingsRow
+          title="Press Enter After"
+          description="Press Enter key automatically after pasting"
+          theme={theme}
+        >
+          <Toggle
+            checked={settings.pressEnterAfter}
+            onChange={handlePressEnterAfterChange}
+            theme={theme}
+          />
         </SettingsRow>
 
-        <SettingsRow title="Languages" description="Select transcription languages (1 selected)" theme={theme}>
+        <SettingsRow
+          title="Languages"
+          description="Select transcription languages (1 selected)"
+          theme={theme}
+        >
           <Button theme={theme}>Manage Languages</Button>
         </SettingsRow>
 
-        <SettingsRow title="Dictionary" description="Custom words for better transcription (0 words)" theme={theme}>
+        <SettingsRow
+          title="Dictionary"
+          description="Custom words for better transcription (0 words)"
+          theme={theme}
+        >
           <Button theme={theme}>Manage Words</Button>
         </SettingsRow>
 
-        <SettingsRow title="Phrase Replacements" description={`Replace phrases in transcriptions (${settings.phraseReplacements?.length || 0} rules)`} theme={theme}>
-          <Button theme={theme} onClick={handleManagePhrases}>Manage Phrases</Button>
+        <SettingsRow
+          title="Phrase Replacements"
+          description={`Replace phrases in transcriptions (${settings.phraseReplacements?.length || 0} rules)`}
+          theme={theme}
+        >
+          <Button theme={theme} onClick={handleManagePhrases}>
+            Manage Phrases
+          </Button>
         </SettingsRow>
       </div>
 

@@ -30,7 +30,7 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
   }, [transcriptions])
 
   const totalSecondsFormatted = stats.seconds.toFixed(2)
-  const wpm = stats.seconds > 0 ? ((stats.wordsOut / stats.seconds) * 60) : 0
+  const wpm = stats.seconds > 0 ? (stats.wordsOut / stats.seconds) * 60 : 0
   const wpmFormatted = wpm.toFixed(2)
 
   const getGreeting = () => {
@@ -51,7 +51,9 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
     } else if (date.toDateString() === yesterday.toDateString()) {
       return 'YESTERDAY'
     } else {
-      return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()
+      return date
+        .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        .toUpperCase()
     }
   }
 
@@ -77,41 +79,51 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
   }, [groupLabels, currentDateLabel])
 
   return (
-    <div style={{ 
-      width: '100%', 
-      height: '100vh', 
-      background: theme.background, 
-      backdropFilter: 'blur(8px)',
-      fontFamily: 'Calibri, sans-serif', 
-      display: 'flex', 
-      flexDirection: 'column', 
-      position: 'relative',
-    }}>
-      <div style={{ 
-        WebkitAppRegion: 'drag', 
-        height: '52px', 
-        position: 'absolute', 
-        top: 0, 
-        left: 0, 
-        right: 0, 
-        zIndex: 1000 
-      } as any} />
-
-      <div style={{ 
-        position: 'absolute',
-        top: '100px',
-        left: 0,
-        right: 0,
+    <div
+      style={{
+        width: '100%',
+        height: '100vh',
+        background: theme.background,
+        backdropFilter: 'blur(8px)',
+        fontFamily: 'Calibri, sans-serif',
         display: 'flex',
-        justifyContent: 'center',
-        zIndex: 100
-      }}>
+        flexDirection: 'column',
+        position: 'relative'
+      }}
+    >
+      <div
+        style={
+          {
+            WebkitAppRegion: 'drag',
+            height: '52px',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 1000
+          } as any
+        }
+      />
+
+      <div
+        style={{
+          position: 'absolute',
+          top: '100px',
+          left: 0,
+          right: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          zIndex: 100
+        }}
+      >
         <div style={{ display: 'flex', gap: '35px', alignItems: 'center' }}>
-          <div style={{ 
-            fontSize: '25px', 
-            color: theme.text, 
-            margin: 0
-          }}>
+          <div
+            style={{
+              fontSize: '25px',
+              color: theme.text,
+              margin: 0
+            }}
+          >
             {getGreeting()}
           </div>
 
@@ -119,34 +131,62 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
 
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '25px', fontWeight: 'normal', color: theme.text, marginBottom: '10px' }}>
+              <div
+                style={{
+                  fontSize: '25px',
+                  fontWeight: 'normal',
+                  color: theme.text,
+                  marginBottom: '10px'
+                }}
+              >
                 {stats.wordsIn.toLocaleString()}
               </div>
               <div style={{ fontSize: '12px', color: theme.textSecondary }}>words in</div>
             </div>
-            
+
             <div style={{ fontSize: '10px', color: theme.border }}>·</div>
-            
+
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '25px', fontWeight: 'normal', color: theme.text, marginBottom: '10px' }}>
+              <div
+                style={{
+                  fontSize: '25px',
+                  fontWeight: 'normal',
+                  color: theme.text,
+                  marginBottom: '10px'
+                }}
+              >
                 {stats.wordsOut.toLocaleString()}
               </div>
               <div style={{ fontSize: '12px', color: theme.textSecondary }}>words out</div>
             </div>
-            
+
             <div style={{ fontSize: '10px', color: theme.border }}>·</div>
-            
+
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '25px', fontWeight: 'normal', color: theme.text, marginBottom: '10px' }}>
+              <div
+                style={{
+                  fontSize: '25px',
+                  fontWeight: 'normal',
+                  color: theme.text,
+                  marginBottom: '10px'
+                }}
+              >
                 {totalSecondsFormatted}
               </div>
               <div style={{ fontSize: '12px', color: theme.textSecondary }}>seconds</div>
             </div>
-            
+
             <div style={{ fontSize: '10px', color: theme.border }}>·</div>
-            
+
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '25px', fontWeight: 'normal', color: theme.text, marginBottom: '10px' }}>
+              <div
+                style={{
+                  fontSize: '25px',
+                  fontWeight: 'normal',
+                  color: theme.text,
+                  marginBottom: '10px'
+                }}
+              >
                 {wpmFormatted}
               </div>
               <div style={{ fontSize: '12px', color: theme.textSecondary }}>wpm</div>
@@ -154,36 +194,42 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
           </div>
         </div>
       </div>
-      
-      <div style={{ 
-        position: 'absolute',
-        top: '200px',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        display: 'flex',
-        justifyContent: 'center',
-        padding: '0 60px'
-      }}>
-        <div style={{ 
-          width: '60vw',
-          minWidth: '600px',
+
+      <div
+        style={{
+          position: 'absolute',
+          top: '200px',
+          bottom: 0,
+          left: 0,
+          right: 0,
           display: 'flex',
-          flexDirection: 'column'
-        }}>
+          justifyContent: 'center',
+          padding: '0 60px'
+        }}
+      >
+        <div
+          style={{
+            width: '60vw',
+            minWidth: '600px',
+            display: 'flex',
+            flexDirection: 'column'
+          }}
+        >
           {currentDateLabel && (
-            <div style={{
-              padding: '12px 20px',
-              fontSize: '11px',
-              fontWeight: 'normal',
-              color: theme.textSecondary,
-              letterSpacing: '0.5px',
-            }}>
+            <div
+              style={{
+                padding: '12px 20px',
+                fontSize: '11px',
+                fontWeight: 'normal',
+                color: theme.textSecondary,
+                letterSpacing: '0.5px'
+              }}
+            >
               {currentDateLabel}
             </div>
           )}
-          <div 
-            style={{ 
+          <div
+            style={{
               flex: 1,
               background: theme.surface,
               backdropFilter: 'blur(8px)',
@@ -213,7 +259,7 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
                 .sort((a, b) => b.topWithin - a.topWithin)
 
               const next =
-                (candidates[0]?.el.getAttribute('data-date-section')) ||
+                candidates[0]?.el.getAttribute('data-date-section') ||
                 sections[0]?.getAttribute('data-date-section') ||
                 ''
 
@@ -228,34 +274,40 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
                 <div key={dateLabel} data-date-section={dateLabel}>
                   {items.map((transcription, index) => (
                     <div key={transcription.id}>
-                      <div style={{ 
-                        display: 'flex',
-                        gap: '16px',
-                        padding: '16px 20px',
-                        background: theme.surface,
-                        backdropFilter: 'blur(8px)',
-                        alignItems: 'center'
-                      }}>
-                        <div style={{
-                          fontSize: '12px',
-                          color: theme.textSecondary,
-                          minWidth: '70px',
-                          flexShrink: 0
-                        }}>
-                          {new Date(transcription.timestamp).toLocaleTimeString('en-US', { 
-                            hour: '2-digit', 
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '16px',
+                          padding: '16px 20px',
+                          background: theme.surface,
+                          backdropFilter: 'blur(8px)',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: '12px',
+                            color: theme.textSecondary,
+                            minWidth: '70px',
+                            flexShrink: 0
+                          }}
+                        >
+                          {new Date(transcription.timestamp).toLocaleTimeString('en-US', {
+                            hour: '2-digit',
                             minute: '2-digit',
-                            hour12: true 
+                            hour12: true
                           })}
                         </div>
-                        <div style={{ 
-                          flex: 1,
-                          fontSize: '14px', 
-                          color: theme.text,
-                          lineHeight: '1.5',
-                          wordWrap: 'break-word',
-                          whiteSpace: 'pre-wrap'
-                        }}>
+                        <div
+                          style={{
+                            flex: 1,
+                            fontSize: '14px',
+                            color: theme.text,
+                            lineHeight: '1.5',
+                            wordWrap: 'break-word',
+                            whiteSpace: 'pre-wrap'
+                          }}
+                        >
                           {transcription.text}
                         </div>
                         <button
@@ -273,17 +325,19 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
                             opacity: 0.4,
                             transition: 'opacity 0.2s'
                           }}
-                          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
-                          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.4'}
+                          onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
+                          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.4')}
                         >
                           <CopyIcon color={theme.textSecondary} size={16} />
                         </button>
                       </div>
                       {(index < items.length - 1 || groupIndex < groupLabels.length - 1) && (
-                        <div style={{ 
-                          height: '1px', 
-                          background: theme.border
-                        }} />
+                        <div
+                          style={{
+                            height: '1px',
+                            background: theme.border
+                          }}
+                        />
                       )}
                     </div>
                   ))}
@@ -293,24 +347,26 @@ export function MainWindow({ onOpenSettings }: MainWindowProps) {
           </div>
         </div>
       </div>
-      
-      <div style={{ 
-        position: 'absolute', 
-        bottom: '32px', 
-        left: '32px'
-      }}>
-        <button 
-          onClick={onOpenSettings} 
-          style={{ 
-            background: 'transparent', 
-            border: 'none', 
-            cursor: 'pointer', 
-            padding: '8px', 
-            opacity: 0.6, 
-            transition: 'opacity 0.2s' 
-          }} 
-          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'} 
-          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '32px',
+          left: '32px'
+        }}
+      >
+        <button
+          onClick={onOpenSettings}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '8px',
+            opacity: 0.6,
+            transition: 'opacity 0.2s'
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.6')}
         >
           <SettingsIcon color={theme.textSecondary} />
         </button>

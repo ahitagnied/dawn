@@ -61,7 +61,6 @@ function createOverlayWindow(): void {
   overlayWindow.show()
 
   if (process.platform === 'darwin') {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(app as any).dock?.show()
   }
 }
@@ -191,7 +190,7 @@ const saveTranscriptionToHistory = (
   wordsIn: number,
   wordsOut: number,
   duration: number
-): void => {
+) => {
   const mainWindow = findWindowByType('main')
   if (mainWindow) {
     mainWindow.webContents.send('transcription:add', {
@@ -358,17 +357,11 @@ app.whenReady().then(() => {
     console.log('Updated press enter after enabled:', pressEnterAfterEnabled)
   })
 
-  ipcMain.handle(
-    'settings:sync',
-    async (_evt, settings: { autoCopy: boolean; pressEnterAfter: boolean }) => {
-      autoCopyEnabled = settings.autoCopy
-      pressEnterAfterEnabled = settings.pressEnterAfter
-      console.log('Synced settings from renderer:', {
-        autoCopy: autoCopyEnabled,
-        pressEnterAfter: pressEnterAfterEnabled
-      })
-    }
-  )
+  ipcMain.handle('settings:sync', async (_evt, settings: { autoCopy: boolean; pressEnterAfter: boolean }) => {
+    autoCopyEnabled = settings.autoCopy
+    pressEnterAfterEnabled = settings.pressEnterAfter
+    console.log('Synced settings from renderer:', { autoCopy: autoCopyEnabled, pressEnterAfter: pressEnterAfterEnabled })
+  })
 
   // Transcription handler
   ipcMain.handle(
@@ -530,3 +523,4 @@ app.on('window-all-closed', () => {
     app.quit()
   }
 })
+

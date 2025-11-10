@@ -18,27 +18,53 @@ export function AssistantSettings({ settings, onUpdateSetting, theme }: Assistan
   return (
     <>
       <div>
-        <SettingsRow title="Enable Assistant Mode" description="Allow AI assistant to process voice commands with context" theme={theme}>
-          <Toggle checked={settings.assistantModeEnabled} onChange={(val) => {
-            onUpdateSetting('assistantModeEnabled', val)
-            if (window.electron?.ipcRenderer) {
-              window.electron.ipcRenderer.invoke('settings:update-assistant-mode', val)
-            }
-          }} theme={theme} />
+        <SettingsRow
+          title="Enable Assistant Mode"
+          description="Allow AI assistant to process voice commands with context"
+          theme={theme}
+        >
+          <Toggle
+            checked={settings.assistantModeEnabled}
+            onChange={(val) => {
+              onUpdateSetting('assistantModeEnabled', val)
+              if (window.electron?.ipcRenderer) {
+                window.electron.ipcRenderer.invoke('settings:update-assistant-mode', val)
+              }
+            }}
+            theme={theme}
+          />
         </SettingsRow>
 
-        <SettingsRow title="Assistant Hotkey" description="Keyboard shortcut to activate AI assistant" theme={theme}>
-          <Button onClick={() => setShowHotkeyDialog(true)} theme={theme}>{settings.assistantModeHotkey}</Button>
+        <SettingsRow
+          title="Assistant Hotkey"
+          description="Keyboard shortcut to activate AI assistant"
+          theme={theme}
+        >
+          <Button onClick={() => setShowHotkeyDialog(true)} theme={theme}>
+            {settings.assistantModeHotkey}
+          </Button>
         </SettingsRow>
 
-        <SettingsRow title="Screenshot Context" description="Include screenshot for visual context" theme={theme}>
-          <Toggle checked={settings.assistantScreenshotEnabled} onChange={(val) => {
-            onUpdateSetting('assistantScreenshotEnabled', val)
-            window.bridge.updateAssistantScreenshot(val)
-          }} theme={theme} />
+        <SettingsRow
+          title="Screenshot Context"
+          description="Include screenshot for visual context"
+          theme={theme}
+        >
+          <Toggle
+            checked={settings.assistantScreenshotEnabled}
+            onChange={(val) => {
+              onUpdateSetting('assistantScreenshotEnabled', val)
+              window.bridge.updateAssistantScreenshot(val)
+            }}
+            theme={theme}
+          />
         </SettingsRow>
 
-        <SettingsRow title="Assistant Model" description="Select AI model for assistant responses" theme={theme}>
+        <SettingsRow
+          title="Assistant Model"
+          description="Select AI model for assistant responses"
+          theme={theme}
+        >
           <Button theme={theme}>Llama 4 Maverick</Button>
         </SettingsRow>
       </div>

@@ -35,7 +35,7 @@ export const lightTheme: Theme = {
   scrim: 'rgba(9, 9, 11, 0.35)',
   modalBackground: 'rgba(245, 245, 247, 0.9)',
   modalSurface: 'rgba(255, 255, 255, 0.92)',
-  modalBorder: 'rgba(0, 0, 0, 0.1)',
+  modalBorder: 'rgba(0, 0, 0, 0.1)'
 }
 
 export const darkTheme: Theme = {
@@ -55,7 +55,7 @@ export const darkTheme: Theme = {
   scrim: 'rgba(5, 5, 10, 0.6)',
   modalBackground: 'rgba(28, 28, 35, 0.9)',
   modalSurface: 'rgba(42, 42, 50, 0.75)',
-  modalBorder: 'rgba(255, 255, 255, 0.18)',
+  modalBorder: 'rgba(255, 255, 255, 0.18)'
 }
 
 export function getTheme(darkMode: boolean): Theme {

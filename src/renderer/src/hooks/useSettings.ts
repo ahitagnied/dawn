@@ -57,9 +57,8 @@ export function useSettings() {
   }, [settings])
 
   const updateSetting = <K extends keyof Settings>(key: K, value: Settings[K]) => {
-    setSettings(prev => ({ ...prev, [key]: value }))
+    setSettings((prev) => ({ ...prev, [key]: value }))
   }
 
   return { settings, updateSetting }
 }
-

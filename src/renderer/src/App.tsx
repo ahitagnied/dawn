@@ -20,11 +20,17 @@ function MainApp() {
       window.bridge.updateAssistantModeHotkey(settings.assistantModeHotkey)
       window.bridge.updateAssistantScreenshot(settings.assistantScreenshotEnabled)
     }
-    
+
     if (window.electron?.ipcRenderer) {
       window.electron.ipcRenderer.invoke('settings:update-sound-effects', settings.soundEffects)
-      window.electron.ipcRenderer.invoke('settings:update-smart-transcription', settings.smartTranscription)
-      window.electron.ipcRenderer.invoke('settings:update-assistant-mode', settings.assistantModeEnabled)
+      window.electron.ipcRenderer.invoke(
+        'settings:update-smart-transcription',
+        settings.smartTranscription
+      )
+      window.electron.ipcRenderer.invoke(
+        'settings:update-assistant-mode',
+        settings.assistantModeEnabled
+      )
     }
   }, [])
 

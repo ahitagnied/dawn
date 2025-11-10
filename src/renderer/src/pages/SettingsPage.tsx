@@ -4,7 +4,13 @@ import { GeneralSettings } from '../components/settings/GeneralSettings'
 import { TranscriptionSettings } from '../components/settings/TranscriptionSettings'
 import { AssistantSettings } from '../components/settings/AssistantSettings'
 import { OutputSettings } from '../components/settings/OutputSettings'
-import { BackIcon, SettingsIcon, MicrophoneIcon, DocumentIcon, OutputIcon } from '../components/icons'
+import {
+  BackIcon,
+  SettingsIcon,
+  MicrophoneIcon,
+  DocumentIcon,
+  OutputIcon
+} from '../components/icons'
 import { Button } from '../components/ui/Button'
 import { getTheme } from '../utils/theme'
 
@@ -20,39 +26,51 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
   const theme = getTheme(settings.darkMode)
 
   return (
-    <div style={{ 
-      width: '100%', 
-      height: '100vh', 
-      background: theme.background, 
-      backdropFilter: 'blur(8px)',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', 
-      display: 'flex', 
-      flexDirection: 'column', 
-      position: 'relative' 
-    }}>
+    <div
+      style={{
+        width: '100%',
+        height: '100vh',
+        background: theme.background,
+        backdropFilter: 'blur(8px)',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative'
+      }}
+    >
       {/* Drag region */}
-      <div style={{ 
-        WebkitAppRegion: 'drag', 
-        height: '52px', 
-        position: 'absolute', 
-        top: 0, 
-        left: 0, 
-        right: 0, 
-        zIndex: 1000 
-      } as any} />
-      
+      <div
+        style={
+          {
+            WebkitAppRegion: 'drag',
+            height: '52px',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 1000
+          } as any
+        }
+      />
+
       {/* Settings content */}
-      <div style={{ 
-        flex: 1, 
-        padding: '60px 120px 100px 120px', 
-        overflowY: 'auto' 
-      }}>
+      <div
+        style={{
+          flex: 1,
+          padding: '60px 120px 100px 120px',
+          overflowY: 'auto'
+        }}
+      >
         {settingsTab === 'general' && (
           <GeneralSettings settings={settings} onUpdateSetting={updateSetting} theme={theme} />
         )}
 
         {settingsTab === 'transcription' && (
-          <TranscriptionSettings settings={settings} onUpdateSetting={updateSetting} theme={theme} />
+          <TranscriptionSettings
+            settings={settings}
+            onUpdateSetting={updateSetting}
+            theme={theme}
+          />
         )}
 
         {settingsTab === 'assistant' && (
@@ -63,23 +81,25 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
           <OutputSettings settings={settings} onUpdateSetting={updateSetting} theme={theme} />
         )}
       </div>
-      
+
       {/* Bottom navigation */}
-      <div style={{ 
-        position: 'absolute', 
-        bottom: '32px', 
-        left: '32px', 
-        display: 'flex', 
-        flexDirection: 'column-reverse',
-        gap: '12px', 
-        alignItems: 'flex-start' 
-      }}>
-        <Button 
-          onClick={onBack} 
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '32px',
+          left: '32px',
+          display: 'flex',
+          flexDirection: 'column-reverse',
+          gap: '12px',
+          alignItems: 'flex-start'
+        }}
+      >
+        <Button
+          onClick={onBack}
           variant="icon"
           theme={theme}
-          style={{ 
-            border: `1px solid ${theme.border}`, 
+          style={{
+            border: `1px solid ${theme.border}`,
             background: theme.background,
             backdropFilter: 'blur(8px)'
           }}
@@ -87,9 +107,9 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
         >
           <BackIcon color={theme.text} />
         </Button>
-        
-        <Button 
-          onClick={() => setSettingsTab('output')} 
+
+        <Button
+          onClick={() => setSettingsTab('output')}
           variant="icon"
           active={settingsTab === 'output'}
           title="Output"
@@ -99,13 +119,11 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
             backdropFilter: settingsTab === 'output' ? 'blur(8px)' : 'none'
           }}
         >
-          <OutputIcon 
-            color={settingsTab === 'output' ? theme.text : theme.textSecondary} 
-          />
+          <OutputIcon color={settingsTab === 'output' ? theme.text : theme.textSecondary} />
         </Button>
-        
-        <Button 
-          onClick={() => setSettingsTab('assistant')} 
+
+        <Button
+          onClick={() => setSettingsTab('assistant')}
           variant="icon"
           active={settingsTab === 'assistant'}
           title="Assistant"
@@ -115,13 +133,11 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
             backdropFilter: settingsTab === 'assistant' ? 'blur(8px)' : 'none'
           }}
         >
-          <DocumentIcon 
-            color={settingsTab === 'assistant' ? theme.text : theme.textSecondary} 
-          />
+          <DocumentIcon color={settingsTab === 'assistant' ? theme.text : theme.textSecondary} />
         </Button>
-        
-        <Button 
-          onClick={() => setSettingsTab('transcription')} 
+
+        <Button
+          onClick={() => setSettingsTab('transcription')}
           variant="icon"
           active={settingsTab === 'transcription'}
           title="Transcription"
@@ -131,13 +147,13 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
             backdropFilter: settingsTab === 'transcription' ? 'blur(8px)' : 'none'
           }}
         >
-          <MicrophoneIcon 
-            color={settingsTab === 'transcription' ? theme.text : theme.textSecondary} 
+          <MicrophoneIcon
+            color={settingsTab === 'transcription' ? theme.text : theme.textSecondary}
           />
         </Button>
-        
-        <Button 
-          onClick={() => setSettingsTab('general')} 
+
+        <Button
+          onClick={() => setSettingsTab('general')}
           variant="icon"
           active={settingsTab === 'general'}
           title="General"
@@ -147,9 +163,9 @@ export function SettingsPage({ onBack }: SettingsPageProps) {
             backdropFilter: settingsTab === 'general' ? 'blur(8px)' : 'none'
           }}
         >
-          <SettingsIcon 
-            color={settingsTab === 'general' ? theme.text : theme.textSecondary} 
-            size={20} 
+          <SettingsIcon
+            color={settingsTab === 'general' ? theme.text : theme.textSecondary}
+            size={20}
           />
         </Button>
       </div>

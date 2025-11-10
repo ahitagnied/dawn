@@ -11,13 +11,21 @@ interface ButtonProps {
   theme?: Theme
 }
 
-export function Button({ onClick, children, variant = 'secondary', title, active = false, style, theme = lightTheme }: ButtonProps) {
+export function Button({
+  onClick,
+  children,
+  variant = 'secondary',
+  title,
+  active = false,
+  style,
+  theme = lightTheme
+}: ButtonProps) {
   const [isHovered, setIsHovered] = useState(false)
-  
+
   const baseStyle: CSSProperties = {
     cursor: 'pointer',
     transition: 'all 0.2s',
-    border: 'none',
+    border: 'none'
   }
 
   const variantStyles: Record<string, CSSProperties> = {
@@ -30,7 +38,7 @@ export function Button({ onClick, children, variant = 'secondary', title, active
       backdropFilter: 'blur(8px)',
       color: theme.toggleThumb,
       fontSize: '12px',
-      fontWeight: '500',
+      fontWeight: '500'
     },
     secondary: {
       ...baseStyle,
@@ -41,7 +49,7 @@ export function Button({ onClick, children, variant = 'secondary', title, active
       backdropFilter: 'blur(8px)',
       color: theme.text,
       fontSize: '12px',
-      fontWeight: '500',
+      fontWeight: '500'
     },
     icon: {
       ...baseStyle,
@@ -53,7 +61,7 @@ export function Button({ onClick, children, variant = 'secondary', title, active
       height: '40px',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent: 'center'
     }
   }
 

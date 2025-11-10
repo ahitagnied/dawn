@@ -12,35 +12,71 @@ interface TranscriptionSettingsProps {
   theme: Theme
 }
 
-export function TranscriptionSettings({ settings, onUpdateSetting, theme }: TranscriptionSettingsProps) {
+export function TranscriptionSettings({
+  settings,
+  onUpdateSetting,
+  theme
+}: TranscriptionSettingsProps) {
   const [showHotkeyDialog, setShowHotkeyDialog] = useState(false)
   const [showTranscriptionHotkeyDialog, setShowTranscriptionHotkeyDialog] = useState(false)
 
   return (
     <>
       <div>
-        <SettingsRow title="Transcription Hotkey" description="Keyboard shortcut to start transcription" theme={theme}>
-          <Button onClick={() => setShowTranscriptionHotkeyDialog(true)} theme={theme}>{settings.transcriptionModeHotkey}</Button>
+        <SettingsRow
+          title="Transcription Hotkey"
+          description="Keyboard shortcut to start transcription"
+          theme={theme}
+        >
+          <Button onClick={() => setShowTranscriptionHotkeyDialog(true)} theme={theme}>
+            {settings.transcriptionModeHotkey}
+          </Button>
         </SettingsRow>
 
-        <SettingsRow title="Push to Talk Hotkey" description="Hold this key for push-to-talk recording" theme={theme}>
-          <Button onClick={() => setShowHotkeyDialog(true)} theme={theme}>{settings.pushToTalkHotkey}</Button>
+        <SettingsRow
+          title="Push to Talk Hotkey"
+          description="Hold this key for push-to-talk recording"
+          theme={theme}
+        >
+          <Button onClick={() => setShowHotkeyDialog(true)} theme={theme}>
+            {settings.pushToTalkHotkey}
+          </Button>
         </SettingsRow>
 
-        <SettingsRow title="Smart Transcription" description="Enhance transcriptions with formatting and emoji conversion" theme={theme}>
-          <Toggle checked={settings.smartTranscription} onChange={(val) => {
-            onUpdateSetting('smartTranscription', val)
-            if (window.electron?.ipcRenderer) {
-              window.electron.ipcRenderer.invoke('settings:update-smart-transcription', val)
-            }
-          }} theme={theme} />
+        <SettingsRow
+          title="Smart Transcription"
+          description="Enhance transcriptions with formatting and emoji conversion"
+          theme={theme}
+        >
+          <Toggle
+            checked={settings.smartTranscription}
+            onChange={(val) => {
+              onUpdateSetting('smartTranscription', val)
+              if (window.electron?.ipcRenderer) {
+                window.electron.ipcRenderer.invoke('settings:update-smart-transcription', val)
+              }
+            }}
+            theme={theme}
+          />
         </SettingsRow>
 
-        <SettingsRow title="Local Transcription" description="Use offline models for transcription" theme={theme}>
-          <Toggle checked={settings.localTranscription} onChange={(val) => onUpdateSetting('localTranscription', val)} theme={theme} />
+        <SettingsRow
+          title="Local Transcription"
+          description="Use offline models for transcription"
+          theme={theme}
+        >
+          <Toggle
+            checked={settings.localTranscription}
+            onChange={(val) => onUpdateSetting('localTranscription', val)}
+            theme={theme}
+          />
         </SettingsRow>
 
-        <SettingsRow title="Local Model" description="Select offline transcription model" theme={theme}>
+        <SettingsRow
+          title="Local Model"
+          description="Select offline transcription model"
+          theme={theme}
+        >
           <Button theme={theme}>Base</Button>
         </SettingsRow>
       </div>

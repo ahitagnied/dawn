@@ -12,45 +12,55 @@ interface HotkeyDialogProps {
 
 // Key code mappings for special keys
 const KEY_SYMBOLS: Record<string, string> = {
-  'Meta': 'Cmd ⌘',
-  'Control': 'Ctrl ⌃',
-  'Alt': 'Option ⌥',
-  'Shift': 'Shift ⇧',
+  Meta: 'Cmd ⌘',
+  Control: 'Ctrl ⌃',
+  Alt: 'Option ⌥',
+  Shift: 'Shift ⇧',
   ' ': 'Space ␣',
-  'Enter': 'Return ↵',
-  'Escape': 'Esc ⎋',
-  'Tab': 'Tab ⇥',
-  'Backspace': 'Delete ⌫',
-  'ArrowUp': '↑',
-  'ArrowDown': '↓',
-  'ArrowLeft': '←',
-  'ArrowRight': '→',
+  Enter: 'Return ↵',
+  Escape: 'Esc ⎋',
+  Tab: 'Tab ⇥',
+  Backspace: 'Delete ⌫',
+  ArrowUp: '↑',
+  ArrowDown: '↓',
+  ArrowLeft: '←',
+  ArrowRight: '→'
 }
 
 const MODIFIER_KEYS = ['Meta', 'Control', 'Alt', 'Shift']
-const SPECIAL_KEYS = ['Enter', 'Escape', 'Tab', 'Backspace', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ']
+const SPECIAL_KEYS = [
+  'Enter',
+  'Escape',
+  'Tab',
+  'Backspace',
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  ' '
+]
 const CODE_KEY_MAP: Record<string, string> = {
-  'Space': ' ',
-  'Enter': 'Enter',
-  'NumpadEnter': 'Enter',
-  'Escape': 'Escape',
-  'Tab': 'Tab',
-  'Backspace': 'Backspace',
-  'ArrowUp': 'ArrowUp',
-  'ArrowDown': 'ArrowDown',
-  'ArrowLeft': 'ArrowLeft',
-  'ArrowRight': 'ArrowRight',
-  'BracketLeft': '[',
-  'BracketRight': ']',
-  'Backslash': '\\',
-  'Semicolon': ';',
-  'Quote': '\'',
-  'Comma': ',',
-  'Period': '.',
-  'Slash': '/',
-  'Backquote': '`',
-  'Minus': '-',
-  'Equal': '=',
+  Space: ' ',
+  Enter: 'Enter',
+  NumpadEnter: 'Enter',
+  Escape: 'Escape',
+  Tab: 'Tab',
+  Backspace: 'Backspace',
+  ArrowUp: 'ArrowUp',
+  ArrowDown: 'ArrowDown',
+  ArrowLeft: 'ArrowLeft',
+  ArrowRight: 'ArrowRight',
+  BracketLeft: '[',
+  BracketRight: ']',
+  Backslash: '\\',
+  Semicolon: ';',
+  Quote: "'",
+  Comma: ',',
+  Period: '.',
+  Slash: '/',
+  Backquote: '`',
+  Minus: '-',
+  Equal: '='
 }
 
 function formatKey(key: string): string {
@@ -92,7 +102,7 @@ function sortKeys(keys: string[]): string[] {
   const specials: string[] = []
   const alphanumeric: string[] = []
 
-  keys.forEach(key => {
+  keys.forEach((key) => {
     if (MODIFIER_KEYS.includes(key)) {
       modifiers.push(key)
     } else if (SPECIAL_KEYS.includes(key)) {
@@ -115,7 +125,7 @@ export function HotkeyDialog({
   onSave,
   currentHotkey,
   title = 'Press the hotkey you want to use to start recording:',
-  theme = lightTheme,
+  theme = lightTheme
 }: HotkeyDialogProps) {
   const [recordedKeys, setRecordedKeys] = useState<Set<string>>(new Set())
   const [displayKeys, setDisplayKeys] = useState<string[]>([])
@@ -141,12 +151,12 @@ export function HotkeyDialog({
       } else {
         keys = new Set(recordedKeys)
       }
-      
+
       if (e.key === 'Meta' || e.metaKey) keys.add('Meta')
       if (e.key === 'Control' || e.ctrlKey) keys.add('Control')
       if (e.key === 'Alt' || e.altKey) keys.add('Alt')
       if (e.key === 'Shift' || e.shiftKey) keys.add('Shift')
-      
+
       if (!MODIFIER_KEYS.includes(e.key)) {
         const normalizedKey = normalizeKey(e)
         if (normalizedKey) {
@@ -197,66 +207,77 @@ export function HotkeyDialog({
   if (!isOpen) return null
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: theme.scrim,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 10000,
-      backdropFilter: 'blur(8px)',
-    }}>
-      <div style={{
-        background: theme.modalBackground,
-        backdropFilter: 'blur(8px)',
-        borderRadius: '16px',
-        padding: '48px',
-        minWidth: '500px',
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: theme.scrim,
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
-        gap: '32px',
-        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-        border: `1px solid ${theme.modalBorder}`,
-      }}>
-        <h2 style={{
-          color: theme.text,
-          fontSize: '18px',
-          fontWeight: '500',
-          margin: 0,
-          textAlign: 'center',
-          lineHeight: '1.5',
-        }}>
+        justifyContent: 'center',
+        zIndex: 10000,
+        backdropFilter: 'blur(8px)'
+      }}
+    >
+      <div
+        style={{
+          background: theme.modalBackground,
+          backdropFilter: 'blur(8px)',
+          borderRadius: '16px',
+          padding: '48px',
+          minWidth: '500px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '32px',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+          border: `1px solid ${theme.modalBorder}`
+        }}
+      >
+        <h2
+          style={{
+            color: theme.text,
+            fontSize: '18px',
+            fontWeight: '500',
+            margin: 0,
+            textAlign: 'center',
+            lineHeight: '1.5'
+          }}
+        >
           {title}
         </h2>
 
-        <div style={{
-          background: theme.modalSurface,
-          backdropFilter: 'blur(8px)',
-          borderRadius: '12px',
-          padding: '24px 32px',
-          minHeight: '80px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '12px',
-          minWidth: '300px',
-          border: `2px solid ${theme.modalBorder}`,
-        }}>
+        <div
+          style={{
+            background: theme.modalSurface,
+            backdropFilter: 'blur(8px)',
+            borderRadius: '12px',
+            padding: '24px 32px',
+            minHeight: '80px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px',
+            minWidth: '300px',
+            border: `2px solid ${theme.modalBorder}`
+          }}
+        >
           {displayKeys.length > 0 ? (
             <>
               {displayKeys.map((key, index) => (
                 <span key={index} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{
-                    color: theme.text,
-                    fontSize: '28px',
-                    fontWeight: '500',
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                  }}>
+                  <span
+                    style={{
+                      color: theme.text,
+                      fontSize: '28px',
+                      fontWeight: '500',
+                      fontFamily:
+                        '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                    }}
+                  >
                     {formatKey(key)}
                   </span>
                   {index < displayKeys.length - 1 && (
@@ -266,20 +287,24 @@ export function HotkeyDialog({
               ))}
             </>
           ) : (
-            <span style={{
-              color: theme.textSecondary,
-              fontSize: '16px',
-            }}>
+            <span
+              style={{
+                color: theme.textSecondary,
+                fontSize: '16px'
+              }}
+            >
               {currentHotkey ? `Current hotkey: ${currentHotkey}` : 'Press any key combination...'}
             </span>
           )}
         </div>
 
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          width: '100%',
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '12px',
+            width: '100%'
+          }}
+        >
           <button
             onClick={handleCancel}
             style={{
@@ -293,7 +318,7 @@ export function HotkeyDialog({
               fontSize: '15px',
               fontWeight: '500',
               cursor: 'pointer',
-              transition: 'all 0.2s',
+              transition: 'all 0.2s'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = theme.buttonHover
@@ -318,7 +343,7 @@ export function HotkeyDialog({
               fontSize: '15px',
               fontWeight: '500',
               cursor: displayKeys.length === 0 ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s',
+              transition: 'all 0.2s'
             }}
             onMouseEnter={(e) => {
               if (displayKeys.length > 0) {

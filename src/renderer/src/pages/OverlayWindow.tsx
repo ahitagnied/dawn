@@ -17,7 +17,7 @@ const applyPhraseReplacements = (text: string, phraseReplacements: PhrasePair[])
   }
 
   let result = text
-  phraseReplacements.forEach(phrase => {
+  phraseReplacements.forEach((phrase) => {
     // Use global, case-insensitive replacement
     const regex = new RegExp(phrase.original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
     result = result.replace(regex, phrase.replacement)
@@ -51,20 +51,21 @@ export function OverlayWindow() {
       const savedSettings = localStorage.getItem('dawn-settings')
       const currentSettings = savedSettings ? JSON.parse(savedSettings) : {}
       const currentDevice = currentSettings.inputDevice || 'default'
-      
+
       console.log('Using device from localStorage:', currentDevice)
-      
+
       // Use the selected input device from settings
       const audioConstraints: MediaStreamConstraints = {
-        audio: currentDevice === 'default' 
-          ? true 
-          : { deviceId: { exact: currentDevice } }
+        audio: currentDevice === 'default' ? true : { deviceId: { exact: currentDevice } }
       }
-      
+
       streamRef.current = await navigator.mediaDevices.getUserMedia(audioConstraints)
     } catch (error) {
-      console.error('Failed to get audio stream with selected device, falling back to default:', error)
-      
+      console.error(
+        'Failed to get audio stream with selected device, falling back to default:',
+        error
+      )
+
       // Fallback to default device if the selected device is not available
       try {
         streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -122,7 +123,9 @@ export function OverlayWindow() {
 
     streamRef.current?.getTracks().forEach((t) => t.stop())
 
-    const duration = recordingStartTimeRef.current ? (Date.now() - recordingStartTimeRef.current) / 1000 : 0
+    const duration = recordingStartTimeRef.current
+      ? (Date.now() - recordingStartTimeRef.current) / 1000
+      : 0
 
     try {
       const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
@@ -130,17 +133,21 @@ export function OverlayWindow() {
       const buf = await blob.arrayBuffer()
       const res = await window.bridge.transcribe(blob.type, buf, duration)
       const originalText = res?.text || ''
-      
+
       // Get the latest settings from localStorage to ensure we have current phrase replacements
       const savedSettings = localStorage.getItem('dawn-settings')
       const currentSettings = savedSettings ? JSON.parse(savedSettings) : {}
       const currentPhraseReplacements = currentSettings.phraseReplacements || []
-      
+
       // Apply phrase replacements to the transcribed text
       const processedText = applyPhraseReplacements(originalText, currentPhraseReplacements)
-      
-      console.log('Phrase replacement in paste:', { originalText, processedText, phraseReplacements: currentPhraseReplacements })
-      
+
+      console.log('Phrase replacement in paste:', {
+        originalText,
+        processedText,
+        phraseReplacements: currentPhraseReplacements
+      })
+
       await window.bridge.pasteText(processedText)
     } catch (err) {
       console.error('[renderer] transcription/paste failed', err)
@@ -159,41 +166,45 @@ export function OverlayWindow() {
   }, []) // Only run once on mount
 
   return (
-    <div style={{ 
-      width: '100vw', 
-      height: '100vh', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      background: 'transparent' 
-    }}>
-      <div style={{ 
-        width: recording ? RECORDING_WIDTH : IDLE_WIDTH, 
-        height: recording ? RECORDING_HEIGHT : IDLE_HEIGHT, 
-        borderRadius: 10, 
-        background: 'rgba(19, 19, 19, 0.8)', 
-        border: '1px solid rgba(255, 255, 255, 0.3)', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        gap: WAVEFORM_GAP, 
-        padding: recording ? '0 8px' : 0, 
-        transition: 'all 0.3s ease' 
-      }}>
-        {recording && audioLevels.map((level, i) => (
-          <div 
-            key={i} 
-            style={{ 
-              width: WAVEFORM_BAR_WIDTH, 
-              height: Math.max(2, level * WAVEFORM_BAR_MAX_HEIGHT), 
-              background: '#fff', 
-              borderRadius: 1, 
-              transition: 'height 0.05s ease' 
-            }} 
-          />
-        ))}
+    <div
+      style={{
+        width: '100vw',
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'transparent'
+      }}
+    >
+      <div
+        style={{
+          width: recording ? RECORDING_WIDTH : IDLE_WIDTH,
+          height: recording ? RECORDING_HEIGHT : IDLE_HEIGHT,
+          borderRadius: 10,
+          background: 'rgba(19, 19, 19, 0.8)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: WAVEFORM_GAP,
+          padding: recording ? '0 8px' : 0,
+          transition: 'all 0.3s ease'
+        }}
+      >
+        {recording &&
+          audioLevels.map((level, i) => (
+            <div
+              key={i}
+              style={{
+                width: WAVEFORM_BAR_WIDTH,
+                height: Math.max(2, level * WAVEFORM_BAR_MAX_HEIGHT),
+                background: '#fff',
+                borderRadius: 1,
+                transition: 'height 0.05s ease'
+              }}
+            />
+          ))}
       </div>
     </div>
   )
 }
-

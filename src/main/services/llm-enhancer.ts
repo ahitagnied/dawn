@@ -1,6 +1,10 @@
 import Groq from 'groq-sdk'
 
-export async function enhanceTranscription(text: string, screenshot?: string, apiKey?: string): Promise<string> {
+export async function enhanceTranscription(
+  text: string,
+  screenshot?: string,
+  apiKey?: string
+): Promise<string> {
   try {
     const groq = new Groq({ apiKey })
 
@@ -160,4 +164,3 @@ export async function enhanceTranscription(text: string, screenshot?: string, ap
     return text
   }
 }
-
