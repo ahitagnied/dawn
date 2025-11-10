@@ -153,60 +153,119 @@ class HotkeyManager {
   }
 
   /**
-   * Start uIOhook for push-to-talk functionality
+   * Start uIOhook for monitoring key releases during push-to-talk
+   * 
+   * This is used in hybrid mode where globalShortcut starts recording
+   * and uIOhook monitors for key release to stop recording.
    */
   private startUIOhook(): void {
     if (this.uiohookStarted) return
 
     uIOhook.on('keydown', (e) => {
       this.pressedKeys.add(e.keycode)
-
-      if (
-        !this.isRecording &&
-        this.pushToTalkKeyGroups.length > 0 &&
-        this.areAllKeysPressed(this.pushToTalkKeyGroups)
-      ) {
-        this.isRecording = true
-        this.currentMode = 'push-to-talk'
-        this.callbacks?.onRecordingStart('push-to-talk')
-      }
     })
 
     uIOhook.on('keyup', (e) => {
       this.pressedKeys.delete(e.keycode)
 
-      if (
-        this.isRecording &&
-        this.currentMode === 'push-to-talk' &&
-        !this.areAllKeysPressed(this.pushToTalkKeyGroups)
-      ) {
-        this.isRecording = false
-        this.currentMode = null
-        this.callbacks?.onRecordingStop('push-to-talk')
+      // If we're recording in push-to-talk mode, check if the hotkey is still pressed
+      if (this.isRecording && this.currentMode === 'push-to-talk') {
+        if (!this.areAllKeysPressed(this.pushToTalkKeyGroups)) {
+          // Keys released, stop recording
+          this.isRecording = false
+          this.currentMode = null
+          console.log('[HotkeyManager] Push-to-talk keys released, stopping recording')
+          this.callbacks?.onRecordingStop('push-to-talk')
+        }
       }
     })
 
     uIOhook.start()
     this.uiohookStarted = true
-    console.log('[HotkeyManager] uIOhook started for push-to-talk')
+    console.log('[HotkeyManager] uIOhook started for key release monitoring')
+  }
+
+  /**
+   * Start push-to-talk recording (called by globalShortcut)
+   * Then monitor key state via uIOhook to detect release
+   */
+  private startPushToTalkRecording(): void {
+    if (this.isRecording) {
+      console.log('[HotkeyManager] Already recording, ignoring')
+      return
+    }
+
+    // Start recording
+    this.isRecording = true
+    this.currentMode = 'push-to-talk'
+    console.log('[HotkeyManager] Push-to-talk recording started via globalShortcut')
+    this.callbacks?.onRecordingStart('push-to-talk')
+
+    // Start monitoring key state via uIOhook
+    this.monitorKeyRelease()
+  }
+
+  /**
+   * Monitor key state to detect when push-to-talk keys are released
+   * Uses a polling approach with uIOhook's key state tracking
+   */
+  private monitorKeyRelease(): void {
+    const checkInterval = setInterval(() => {
+      // If recording stopped by other means, clear interval
+      if (!this.isRecording || this.currentMode !== 'push-to-talk') {
+        clearInterval(checkInterval)
+        return
+      }
+
+      // Check if all push-to-talk keys are still pressed
+      if (!this.areAllKeysPressed(this.pushToTalkKeyGroups)) {
+        // Keys released, stop recording
+        clearInterval(checkInterval)
+        this.isRecording = false
+        this.currentMode = null
+        console.log('[HotkeyManager] Push-to-talk keys released (polling), stopping recording')
+        this.callbacks?.onRecordingStop('push-to-talk')
+      }
+    }, 50) // Check every 50ms for responsive key release detection
   }
 
   /**
    * Register a hotkey for a specific mode
+   * 
+   * Hybrid approach for push-to-talk:
+   * - Uses globalShortcut to detect key press (suppresses key events automatically)
+   * - Uses uIOhook to monitor key state and detect release
    */
   registerHotkey(mode: HotkeyMode, displayHotkey: string): boolean {
     try {
       console.log(`[HotkeyManager] Registering ${mode}: ${displayHotkey}`)
 
       if (mode === 'push-to-talk') {
-        // Use uIOhook for push-to-talk (needs keyup detection)
+        // Hybrid approach: globalShortcut + uIOhook
+        this.unregisterHotkey(mode)
+        
+        // Convert to both formats
+        const accelerator = this.convertToAccelerator(displayHotkey)
         this.pushToTalkKeyGroups = this.convertToKeycodes(displayHotkey)
-        this.startUIOhook()
-        console.log(
-          `[HotkeyManager] Push-to-talk registered with keycodes:`,
-          this.pushToTalkKeyGroups
-        )
-        return true
+        
+        // Register with globalShortcut for key press detection (with automatic suppression)
+        const success = globalShortcut.register(accelerator, () => {
+          this.startPushToTalkRecording()
+        })
+
+        if (success) {
+          this.registeredHotkeys.set(mode, accelerator)
+          // Start uIOhook for key release monitoring
+          this.startUIOhook()
+          console.log(
+            `[HotkeyManager] Push-to-talk registered (hybrid): ${accelerator}, keycodes:`,
+            this.pushToTalkKeyGroups
+          )
+        } else {
+          console.error(`[HotkeyManager] Failed to register push-to-talk hotkey: ${accelerator}`)
+        }
+
+        return success
       } else {
         // Use globalShortcut for toggle modes
         this.unregisterHotkey(mode)
@@ -259,16 +318,16 @@ class HotkeyManager {
    * Unregister a hotkey for a specific mode
    */
   unregisterHotkey(mode: HotkeyMode): void {
-    if (mode === 'push-to-talk') {
-      this.pushToTalkKeyGroups = []
-      return
-    }
-
     const accelerator = this.registeredHotkeys.get(mode)
     if (accelerator) {
       globalShortcut.unregister(accelerator)
       this.registeredHotkeys.delete(mode)
       console.log(`[HotkeyManager] Unregistered ${mode} hotkey`)
+    }
+
+    // Clear push-to-talk keycodes if unregistering push-to-talk
+    if (mode === 'push-to-talk') {
+      this.pushToTalkKeyGroups = []
     }
   }
 
