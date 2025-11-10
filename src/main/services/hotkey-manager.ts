@@ -13,6 +13,7 @@ export type HotkeyMode = 'push-to-talk' | 'transcription' | 'assistant'
 interface HotkeyCallbacks {
   onRecordingStart: (mode: HotkeyMode) => void
   onRecordingStop: (mode: HotkeyMode) => void
+  onRecordingCancel: (mode: HotkeyMode) => void
 }
 
 class HotkeyManager {
@@ -21,11 +22,15 @@ class HotkeyManager {
   private callbacks: HotkeyCallbacks | null = null
   private isRecording = false
   private currentMode: HotkeyMode | null = null
+  private recordingStartTime: number | null = null
 
   // Push-to-talk specific state (requires uIOhook for keyup detection)
   private pushToTalkKeyGroups: number[][] = []
   private pressedKeys: Set<number> = new Set()
   private uiohookStarted = false
+
+  // Minimum recording duration to prevent accidental quick releases (in milliseconds)
+  private readonly MIN_RECORDING_DURATION_MS = 200
 
   /**
    * Convert display format hotkey to Electron accelerator format
@@ -171,11 +176,9 @@ class HotkeyManager {
       // If we're recording in push-to-talk mode, check if the hotkey is still pressed
       if (this.isRecording && this.currentMode === 'push-to-talk') {
         if (!this.areAllKeysPressed(this.pushToTalkKeyGroups)) {
-          // Keys released, stop recording
-          this.isRecording = false
-          this.currentMode = null
-          console.log('[HotkeyManager] Push-to-talk keys released, stopping recording')
-          this.callbacks?.onRecordingStop('push-to-talk')
+          // Keys released, stop recording (will check duration and decide to cancel or stop)
+          console.log('[HotkeyManager] Push-to-talk keys released (keyup event)')
+          this.stopPushToTalkRecording()
         }
       }
     })
@@ -198,11 +201,41 @@ class HotkeyManager {
     // Start recording
     this.isRecording = true
     this.currentMode = 'push-to-talk'
+    this.recordingStartTime = Date.now()
     console.log('[HotkeyManager] Push-to-talk recording started via globalShortcut')
     this.callbacks?.onRecordingStart('push-to-talk')
 
     // Start monitoring key state via uIOhook
     this.monitorKeyRelease()
+  }
+
+  /**
+   * Stop push-to-talk recording and check if it was a quick release
+   * If duration < MIN_RECORDING_DURATION_MS, cancel the recording
+   * Otherwise, process it normally
+   */
+  private stopPushToTalkRecording(): void {
+    if (!this.isRecording || this.currentMode !== 'push-to-talk') {
+      return
+    }
+
+    const duration = this.recordingStartTime ? Date.now() - this.recordingStartTime : 0
+
+    // Reset recording state
+    this.isRecording = false
+    this.currentMode = null
+    this.recordingStartTime = null
+
+    // Check if this was a quick release (accidental press)
+    if (duration < this.MIN_RECORDING_DURATION_MS) {
+      console.log(
+        `[HotkeyManager] Quick release detected (${duration}ms), canceling recording`
+      )
+      this.callbacks?.onRecordingCancel('push-to-talk')
+    } else {
+      console.log(`[HotkeyManager] Recording stopped normally (${duration}ms)`)
+      this.callbacks?.onRecordingStop('push-to-talk')
+    }
   }
 
   /**
@@ -221,10 +254,7 @@ class HotkeyManager {
       if (!this.areAllKeysPressed(this.pushToTalkKeyGroups)) {
         // Keys released, stop recording
         clearInterval(checkInterval)
-        this.isRecording = false
-        this.currentMode = null
-        console.log('[HotkeyManager] Push-to-talk keys released (polling), stopping recording')
-        this.callbacks?.onRecordingStop('push-to-talk')
+        this.stopPushToTalkRecording()
       }
     }, 50) // Check every 50ms for responsive key release detection
   }
@@ -304,12 +334,14 @@ class HotkeyManager {
       this.activeToggles.delete(mode)
       this.isRecording = false
       this.currentMode = null
+      this.recordingStartTime = null
       this.callbacks.onRecordingStop(mode)
     } else {
       // Start recording
       this.activeToggles.add(mode)
       this.isRecording = true
       this.currentMode = mode
+      this.recordingStartTime = Date.now()
       this.callbacks.onRecordingStart(mode)
     }
   }
@@ -341,6 +373,7 @@ class HotkeyManager {
     this.pushToTalkKeyGroups = []
     this.isRecording = false
     this.currentMode = null
+    this.recordingStartTime = null
 
     if (this.uiohookStarted) {
       uIOhook.removeAllListeners()

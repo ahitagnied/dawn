@@ -4,6 +4,7 @@ import { Transcription } from '../types/transcription'
 interface Bridge {
   onRecordStart(cb: () => void): () => void
   onRecordStop(cb: () => void): () => void
+  onRecordCancel(cb: () => void): () => void
   onTranscriptionAdd(cb: (transcription: Transcription) => void): () => void
   transcribe(mime: string, arrayBuffer: ArrayBuffer, duration: number): Promise<{ text: string }>
   pasteText(text: string): Promise<boolean>

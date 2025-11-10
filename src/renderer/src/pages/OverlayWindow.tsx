@@ -37,12 +37,15 @@ export function OverlayWindow() {
   const analyserRef = useRef<AnalyserNode | null>(null)
   const animationRef = useRef<number | null>(null)
   const recordingStartTimeRef = useRef<number | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const isSettingUpRef = useRef(false) // Track if we're in the middle of setup
 
   const startRecording = useCallback(async () => {
     console.log('startRecording called with device:', settings.inputDevice)
-    if (recordingRef.current) return
+    if (recordingRef.current || isSettingUpRef.current) return
 
     recordingRef.current = true
+    isSettingUpRef.current = true
     recordingStartTimeRef.current = Date.now()
     setRecording(true)
 
@@ -60,6 +63,15 @@ export function OverlayWindow() {
       }
 
       streamRef.current = await navigator.mediaDevices.getUserMedia(audioConstraints)
+
+      // Check if recording was canceled during async getUserMedia
+      if (!recordingRef.current) {
+        console.log('[OverlayWindow] Recording canceled during getUserMedia, cleaning up')
+        streamRef.current?.getTracks().forEach((t) => t.stop())
+        streamRef.current = null
+        isSettingUpRef.current = false
+        return
+      }
     } catch (error) {
       console.error(
         'Failed to get audio stream with selected device, falling back to default:',
@@ -69,21 +81,52 @@ export function OverlayWindow() {
       // Fallback to default device if the selected device is not available
       try {
         streamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true })
+
+        // Check again if recording was canceled during fallback
+        if (!recordingRef.current) {
+          console.log('[OverlayWindow] Recording canceled during fallback, cleaning up')
+          streamRef.current?.getTracks().forEach((t) => t.stop())
+          streamRef.current = null
+          isSettingUpRef.current = false
+          return
+        }
       } catch (fallbackError) {
         console.error('Failed to get any audio stream:', fallbackError)
         recordingRef.current = false
+        isSettingUpRef.current = false
         setRecording(false)
         return
       }
     }
 
+    // Final check before setting up audio processing
+    if (!recordingRef.current) {
+      console.log('[OverlayWindow] Recording canceled before audio setup, cleaning up')
+      streamRef.current?.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+      isSettingUpRef.current = false
+      return
+    }
+
     const audioContext = new AudioContext()
+    audioContextRef.current = audioContext
     const source = audioContext.createMediaStreamSource(streamRef.current)
     const analyser = audioContext.createAnalyser()
 
     analyser.fftSize = 64
     source.connect(analyser)
     analyserRef.current = analyser
+
+    // Check once more if recording was canceled during audio setup
+    if (!recordingRef.current) {
+      console.log('[OverlayWindow] Recording canceled during audio setup, cleaning up')
+      streamRef.current?.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+      audioContext.close()
+      audioContextRef.current = null
+      isSettingUpRef.current = false
+      return
+    }
 
     const dataArray = new Uint8Array(analyser.frequencyBinCount)
 
@@ -100,12 +143,16 @@ export function OverlayWindow() {
     rec.ondataavailable = (e) => e.data && e.data.size && chunksRef.current.push(e.data)
     recRef.current = rec
     rec.start()
+
+    isSettingUpRef.current = false
+    console.log('[OverlayWindow] Recording setup complete')
   }, []) // No dependencies needed since we read from localStorage
 
   async function stopRecording() {
     if (!recordingRef.current) return
 
     recordingRef.current = false
+    isSettingUpRef.current = false
     setRecording(false)
 
     if (animationRef.current) {
@@ -121,7 +168,21 @@ export function OverlayWindow() {
       })
     }
 
-    streamRef.current?.getTracks().forEach((t) => t.stop())
+    // Stop microphone immediately to prevent it from staying active
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        track.stop()
+        console.log('[OverlayWindow] Stopped track:', track.kind, track.label)
+      })
+      streamRef.current = null
+    }
+
+    // Close AudioContext to release audio resources
+    if (audioContextRef.current) {
+      await audioContextRef.current.close()
+      audioContextRef.current = null
+      console.log('[OverlayWindow] Closed AudioContext')
+    }
 
     const duration = recordingStartTimeRef.current
       ? (Date.now() - recordingStartTimeRef.current) / 1000
@@ -129,7 +190,18 @@ export function OverlayWindow() {
 
     try {
       const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+      const blobSize = blob.size
       chunksRef.current = []
+
+      console.log('[OverlayWindow] Recording blob size:', blobSize, 'bytes, duration:', duration, 's')
+
+      // Check if the blob has meaningful content (minimum 100 bytes for valid audio)
+      // Empty or near-empty files indicate the recorder didn't capture any audio
+      if (blobSize < 100) {
+        console.log('[OverlayWindow] Blob too small, skipping transcription')
+        return
+      }
+
       const buf = await blob.arrayBuffer()
       const res = await window.bridge.transcribe(blob.type, buf, duration)
       const originalText = res?.text || ''
@@ -154,14 +226,78 @@ export function OverlayWindow() {
     }
   }
 
+  async function cancelRecording() {
+    if (!recordingRef.current && !isSettingUpRef.current) return
+
+    console.log('[OverlayWindow] Canceling recording (quick release)')
+
+    // Set recordingRef to false FIRST so startRecording can detect cancellation
+    recordingRef.current = false
+    setRecording(false)
+
+    // Wait briefly for any ongoing setup to detect the cancellation
+    // This gives getUserMedia time to complete and clean up
+    if (isSettingUpRef.current) {
+      console.log('[OverlayWindow] Setup in progress, waiting for cleanup...')
+      let waitCount = 0
+      while (isSettingUpRef.current && waitCount < 20) {
+        await new Promise((resolve) => setTimeout(resolve, 10))
+        waitCount++
+      }
+      console.log('[OverlayWindow] Setup cleanup wait complete')
+    }
+
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current)
+      animationRef.current = null
+    }
+
+    const rec = recRef.current
+    if (rec && rec.state !== 'inactive') {
+      // Stop recorder immediately without waiting
+      rec.stop()
+    }
+
+    // Stop microphone immediately and aggressively for quick releases
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        track.stop()
+        console.log('[OverlayWindow] Force stopped track:', track.kind, track.label)
+      })
+      streamRef.current = null
+    }
+
+    // Close AudioContext immediately to release audio resources
+    if (audioContextRef.current) {
+      try {
+        await audioContextRef.current.close()
+        audioContextRef.current = null
+        console.log('[OverlayWindow] Force closed AudioContext')
+      } catch (error) {
+        console.error('[OverlayWindow] Error closing AudioContext:', error)
+      }
+    }
+
+    // Clear the recorded chunks without sending to API
+    chunksRef.current = []
+    
+    // Reset all references to ensure clean state
+    recRef.current = null
+    isSettingUpRef.current = false
+    
+    console.log('[OverlayWindow] Recording canceled and cleaned up (microphone released)')
+  }
+
   useEffect(() => {
     console.log('Setting up event listeners')
     const offStart = window.bridge?.onRecordStart?.(startRecording)
     const offStop = window.bridge?.onRecordStop?.(stopRecording)
+    const offCancel = window.bridge?.onRecordCancel?.(cancelRecording)
     return () => {
       console.log('Cleaning up event listeners')
       offStart?.()
       offStop?.()
+      offCancel?.()
     }
   }, []) // Only run once on mount
 

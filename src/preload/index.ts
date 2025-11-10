@@ -13,6 +13,11 @@ const bridge = {
     ipcRenderer.on('record:stop', handler)
     return () => ipcRenderer.removeListener('record:stop', handler)
   },
+  onRecordCancel(cb: () => void) {
+    const handler = () => cb()
+    ipcRenderer.on('record:cancel', handler)
+    return () => ipcRenderer.removeListener('record:cancel', handler)
+  },
   onTranscriptionAdd(cb: (transcription: Transcription) => void) {
     const handler = (_event: any, transcription: Transcription) => cb(transcription)
     ipcRenderer.on('transcription:add', handler)

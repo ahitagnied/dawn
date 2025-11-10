@@ -262,6 +262,23 @@ const handleRecordingStop = async (mode: HotkeyMode): Promise<void> => {
   }
 }
 
+const handleRecordingCancel = async (mode: HotkeyMode): Promise<void> => {
+  console.log(`[Main] Recording canceled (quick release): ${mode}`)
+
+  // Notify all windows to cancel recording (won't send to API)
+  BrowserWindow.getAllWindows().forEach((window) => {
+    window.webContents.send('record:cancel')
+  })
+
+  // Don't play the stop sound for canceled recordings
+  // Just restore system volume if needed
+  if (autoMuteEnabled && process.platform === 'darwin') {
+    setMacVolume(previousVolume).catch((error) => {
+      console.error('Failed to restore system volume:', error)
+    })
+  }
+}
+
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
 
@@ -271,7 +288,8 @@ app.whenReady().then(() => {
   // Initialize hotkey manager
   hotkeyManager.initialize({
     onRecordingStart: handleRecordingStart,
-    onRecordingStop: handleRecordingStop
+    onRecordingStop: handleRecordingStop,
+    onRecordingCancel: handleRecordingCancel
   })
 
   // Register default hotkeys
