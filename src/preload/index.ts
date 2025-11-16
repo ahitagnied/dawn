@@ -58,6 +58,9 @@ const bridge = {
   },
   syncSettings(settings: { autoCopy: boolean; pressEnterAfter: boolean }) {
     return ipcRenderer.invoke('settings:sync', settings)
+  },
+  updateLocalTranscription(enabled: boolean) {
+    return ipcRenderer.invoke('settings:update-local-transcription', enabled)
   }
 }
 

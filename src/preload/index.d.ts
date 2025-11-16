@@ -18,6 +18,7 @@ interface Bridge {
   updateAutoCopy(enabled: boolean): Promise<void>
   updatePressEnterAfter(enabled: boolean): Promise<void>
   syncSettings(settings: { autoCopy: boolean; pressEnterAfter: boolean }): Promise<void>
+  updateLocalTranscription(enabled: boolean): Promise<void>
 }
 
 declare global {

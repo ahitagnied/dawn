@@ -67,7 +67,12 @@ export function TranscriptionSettings({
         >
           <Toggle
             checked={settings.localTranscription}
-            onChange={(val) => onUpdateSetting('localTranscription', val)}
+            onChange={(val) => {
+              onUpdateSetting('localTranscription', val)
+              if (window.bridge?.updateLocalTranscription) {
+                window.bridge.updateLocalTranscription(val)
+              }
+            }}
             theme={theme}
           />
         </SettingsRow>

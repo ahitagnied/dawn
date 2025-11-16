@@ -8,6 +8,7 @@ import { config } from 'dotenv'
 import Groq from 'groq-sdk'
 import { enhanceTranscription } from './services/llm-enhancer'
 import { hotkeyManager, HotkeyMode } from './services/hotkey-manager'
+import { whisperKitService } from './services/whisperkit-service'
 
 config({ path: join(__dirname, '../../.env') })
 
@@ -18,6 +19,7 @@ let previousVolume = 0
 let autoMuteEnabled = true
 let soundEffectsEnabled = false
 let smartTranscriptionEnabled = false
+let localTranscriptionEnabled = true
 let assistantModeEnabled = true
 let assistantScreenshotEnabled = false
 const assistantModel = 'meta-llama/llama-4-maverick-17b-128e-instruct'
@@ -280,7 +282,7 @@ const handleRecordingCancel = async (mode: HotkeyMode): Promise<void> => {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.electron')
 
   createMainWindow()
@@ -297,6 +299,20 @@ app.whenReady().then(() => {
   hotkeyManager.registerHotkey('push-to-talk', 'Option ⌥')
   hotkeyManager.registerHotkey('transcription', 'Option ⌥ + Shift ⇧ + Z')
   hotkeyManager.registerHotkey('assistant', 'Option ⌥ + Shift ⇧ + S')
+
+  // Initialize WhisperKit if available and local transcription is enabled
+  if (localTranscriptionEnabled && whisperKitService.isAvailable()) {
+    console.log('[Main] WhisperKit is available, starting server...')
+    try {
+      await whisperKitService.startServer()
+      console.log('[Main] WhisperKit server started successfully')
+    } catch (error) {
+      console.error('[Main] Failed to start WhisperKit server:', error)
+      console.log('[Main] Will fall back to Groq API for transcription')
+    }
+  } else if (localTranscriptionEnabled) {
+    console.log('[Main] WhisperKit not available, will use Groq API fallback')
+  }
 
   // Setup tray
   const tray = new Tray(join(__dirname, '../../resources/icon-tray.png'))
@@ -339,6 +355,24 @@ app.whenReady().then(() => {
 
   ipcMain.handle('settings:update-smart-transcription', async (_evt, enabled: boolean) => {
     smartTranscriptionEnabled = enabled
+  })
+
+  ipcMain.handle('settings:update-local-transcription', async (_evt, enabled: boolean) => {
+    localTranscriptionEnabled = enabled
+    console.log('Updated local transcription enabled:', localTranscriptionEnabled)
+    
+    // Start or stop WhisperKit server based on setting
+    if (enabled && whisperKitService.isAvailable()) {
+      try {
+        await whisperKitService.startServer()
+        console.log('[Main] WhisperKit server started')
+      } catch (error) {
+        console.error('[Main] Failed to start WhisperKit server:', error)
+      }
+    } else if (!enabled) {
+      whisperKitService.stopServer()
+      console.log('[Main] WhisperKit server stopped')
+    }
   })
 
   ipcMain.handle('settings:update-assistant-mode-hotkey', async (_evt, hotkey: string) => {
@@ -398,27 +432,49 @@ app.whenReady().then(() => {
       writeFileSync(file, Buffer.from(buf))
 
       const fs = await import('fs')
-      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+      let transcription: { text?: string } = { text: '' }
 
-      let retries = 3
-      let transcription
-      while (retries > 0) {
+      // Try local transcription first if enabled
+      if (localTranscriptionEnabled && whisperKitService.isAvailable()) {
         try {
-          transcription = await groq.audio.transcriptions.create({
-            file: fs.createReadStream(file),
-            model: 'whisper-large-v3-turbo',
-            temperature: 0,
-            response_format: 'verbose_json'
+          console.log('[Main] Attempting local transcription with WhisperKit...')
+          const result = await whisperKitService.transcribe(file, {
+            temperature: 0
           })
-          break
+          transcription = { text: result.text }
+          console.log('[Main] Local transcription successful')
         } catch (error) {
-          retries--
-          if (retries === 0) {
-            console.error('STT failed after 3 attempts:', error)
-            throw error
+          console.error('[Main] Local transcription failed, falling back to Groq:', error)
+          // Fall through to Groq API
+          transcription = { text: '' }
+        }
+      }
+
+      // Use Groq API if local transcription is disabled or failed
+      if (!transcription.text || transcription.text.length === 0) {
+        console.log('[Main] Using Groq API for transcription...')
+        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+
+        let retries = 3
+        while (retries > 0) {
+          try {
+            transcription = await groq.audio.transcriptions.create({
+              file: fs.createReadStream(file),
+              model: 'whisper-large-v3-turbo',
+              temperature: 0,
+              response_format: 'verbose_json'
+            })
+            console.log('[Main] Groq transcription successful')
+            break
+          } catch (error) {
+            retries--
+            if (retries === 0) {
+              console.error('STT failed after 3 attempts:', error)
+              throw error
+            }
+            console.log(`STT connection failed, retrying... (${retries} attempts left)`)
+            await new Promise((resolve) => setTimeout(resolve, 1000))
           }
-          console.log(`STT connection failed, retrying... (${retries} attempts left)`)
-          await new Promise((resolve) => setTimeout(resolve, 1000))
         }
       }
 
@@ -541,6 +597,7 @@ app.whenReady().then(() => {
 
 app.on('will-quit', () => {
   hotkeyManager.unregisterAll()
+  whisperKitService.stopServer()
 })
 
 app.on('window-all-closed', () => {

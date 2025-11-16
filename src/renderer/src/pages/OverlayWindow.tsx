@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useSettings, PhrasePair } from '../hooks/useSettings'
+import { WavEncoder } from '../utils/wav-encoder'
 
 const IDLE_WIDTH = 40
 const IDLE_HEIGHT = 8
@@ -38,6 +39,8 @@ export function OverlayWindow() {
   const animationRef = useRef<number | null>(null)
   const recordingStartTimeRef = useRef<number | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
+  const wavEncoderRef = useRef<WavEncoder | null>(null)
+  const processorNodeRef = useRef<ScriptProcessorNode | null>(null)
   const isSettingUpRef = useRef(false) // Track if we're in the middle of setup
 
   const startRecording = useCallback(async () => {
@@ -138,14 +141,28 @@ export function OverlayWindow() {
     }
     updateWaveform()
 
-    const rec = new MediaRecorder(streamRef.current, { mimeType: 'audio/webm' })
-    chunksRef.current = []
-    rec.ondataavailable = (e) => e.data && e.data.size && chunksRef.current.push(e.data)
-    recRef.current = rec
-    rec.start()
+    // Initialize WAV encoder
+    const wavEncoder = new WavEncoder(audioContext.sampleRate, 1) // Mono audio
+    wavEncoderRef.current = wavEncoder
+
+    // Create ScriptProcessorNode for recording (4096 buffer size)
+    const processor = audioContext.createScriptProcessor(4096, 1, 1)
+    processorNodeRef.current = processor
+
+    processor.onaudioprocess = (e) => {
+      if (!recordingRef.current) return
+      
+      const inputData = e.inputBuffer.getChannelData(0)
+      const buffer = new Float32Array(inputData)
+      wavEncoder.addBuffer([buffer])
+    }
+
+    // Connect audio pipeline: source -> analyser -> processor -> destination
+    source.connect(processor)
+    processor.connect(audioContext.destination)
 
     isSettingUpRef.current = false
-    console.log('[OverlayWindow] Recording setup complete')
+    console.log('[OverlayWindow] Recording setup complete (WAV format)')
   }, []) // No dependencies needed since we read from localStorage
 
   async function stopRecording() {
@@ -160,12 +177,10 @@ export function OverlayWindow() {
       animationRef.current = null
     }
 
-    const rec = recRef.current
-    if (rec && rec.state !== 'inactive') {
-      await new Promise<void>((resolve) => {
-        rec.onstop = () => resolve()
-        rec.stop()
-      })
+    // Disconnect processor node
+    if (processorNodeRef.current) {
+      processorNodeRef.current.disconnect()
+      processorNodeRef.current = null
     }
 
     // Stop microphone immediately to prevent it from staying active
@@ -177,26 +192,28 @@ export function OverlayWindow() {
       streamRef.current = null
     }
 
-    // Close AudioContext to release audio resources
-    if (audioContextRef.current) {
-      await audioContextRef.current.close()
-      audioContextRef.current = null
-      console.log('[OverlayWindow] Closed AudioContext')
-    }
-
     const duration = recordingStartTimeRef.current
       ? (Date.now() - recordingStartTimeRef.current) / 1000
       : 0
 
     try {
-      const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-      const blobSize = blob.size
-      chunksRef.current = []
+      // Encode to WAV
+      const wavEncoder = wavEncoderRef.current
+      if (!wavEncoder) {
+        console.log('[OverlayWindow] No WAV encoder, skipping transcription')
+        return
+      }
 
-      console.log('[OverlayWindow] Recording blob size:', blobSize, 'bytes, duration:', duration, 's')
+      const blob = wavEncoder.encode()
+      const blobSize = blob.size
+      
+      // Clear encoder for next recording
+      wavEncoder.clear()
+      wavEncoderRef.current = null
+
+      console.log('[OverlayWindow] Recording WAV blob size:', blobSize, 'bytes, duration:', duration, 's')
 
       // Check if the blob has meaningful content (minimum 100 bytes for valid audio)
-      // Empty or near-empty files indicate the recorder didn't capture any audio
       if (blobSize < 100) {
         console.log('[OverlayWindow] Blob too small, skipping transcription')
         return
@@ -223,6 +240,13 @@ export function OverlayWindow() {
       await window.bridge.pasteText(processedText)
     } catch (err) {
       console.error('[renderer] transcription/paste failed', err)
+    } finally {
+      // Close AudioContext to release audio resources
+      if (audioContextRef.current) {
+        await audioContextRef.current.close()
+        audioContextRef.current = null
+        console.log('[OverlayWindow] Closed AudioContext')
+      }
     }
   }
 
@@ -252,10 +276,16 @@ export function OverlayWindow() {
       animationRef.current = null
     }
 
-    const rec = recRef.current
-    if (rec && rec.state !== 'inactive') {
-      // Stop recorder immediately without waiting
-      rec.stop()
+    // Disconnect processor node
+    if (processorNodeRef.current) {
+      processorNodeRef.current.disconnect()
+      processorNodeRef.current = null
+    }
+
+    // Clear WAV encoder
+    if (wavEncoderRef.current) {
+      wavEncoderRef.current.clear()
+      wavEncoderRef.current = null
     }
 
     // Stop microphone immediately and aggressively for quick releases

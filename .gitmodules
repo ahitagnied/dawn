@@ -1,0 +1,3 @@
+[submodule "WhisperKit"]
+	path = WhisperKit
+	url = https://github.com/argmaxinc/WhisperKit
