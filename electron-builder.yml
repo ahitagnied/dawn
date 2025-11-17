@@ -11,6 +11,11 @@ files:
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 asarUnpack:
   - resources/**
+extraResources:
+  - from: whisperkit-bundle
+    to: whisperkit
+    filter:
+      - '**/*'
 win:
   icon: resources/icon.png
   executableName: dawn

@@ -41,3 +41,9 @@ coverage
 
 # Misc
 .cache
+
+# WhisperKit
+WhisperKit/.build
+WhisperKit/Models
+# Keep the whisperkit-bundle for distribution
+!whisperkit-bundle
