@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SettingsRow } from '../ui/SettingsRow'
 import { Toggle } from '../ui/Toggle'
 import { Button } from '../ui/Button'
 import { HotkeyDialog } from '../ui/HotkeyDialog'
+import { ModelSelectorDialog } from './ModelSelectorDialog'
 import { Settings } from '../../hooks/useSettings'
 import { Theme } from '../../utils/theme'
 
@@ -19,6 +20,25 @@ export function TranscriptionSettings({
 }: TranscriptionSettingsProps) {
   const [showHotkeyDialog, setShowHotkeyDialog] = useState(false)
   const [showTranscriptionHotkeyDialog, setShowTranscriptionHotkeyDialog] = useState(false)
+  const [showModelSelector, setShowModelSelector] = useState(false)
+  const [currentModelName, setCurrentModelName] = useState('Base')
+
+  // Map model IDs to display names
+  const getModelDisplayName = (modelId: string): string => {
+    const nameMap: Record<string, string> = {
+      'openai_whisper-base': 'Base',
+      'openai_whisper-large-v3-v20240930_turbo_632MB': 'Turbo',
+      'openai_whisper-large-v3_947MB': 'Large'
+    }
+    return nameMap[modelId] || 'Base'
+  }
+
+  useEffect(() => {
+    // Update display name when selectedModel changes
+    if (settings.selectedModel) {
+      setCurrentModelName(getModelDisplayName(settings.selectedModel))
+    }
+  }, [settings.selectedModel])
 
   return (
     <>
@@ -82,7 +102,9 @@ export function TranscriptionSettings({
           description="Select offline transcription model"
           theme={theme}
         >
-          <Button theme={theme}>Base</Button>
+          <Button onClick={() => setShowModelSelector(true)} theme={theme}>
+            {currentModelName}
+          </Button>
         </SettingsRow>
       </div>
 
@@ -106,6 +128,17 @@ export function TranscriptionSettings({
         }}
         currentHotkey={settings.transcriptionModeHotkey}
         title="Press the hotkey you want to use for transcription mode:"
+        theme={theme}
+      />
+
+      <ModelSelectorDialog
+        isOpen={showModelSelector}
+        onClose={() => setShowModelSelector(false)}
+        onSave={(modelId) => {
+          onUpdateSetting('selectedModel', modelId)
+          setCurrentModelName(getModelDisplayName(modelId))
+        }}
+        currentModelId={settings.selectedModel || 'openai_whisper-base'}
         theme={theme}
       />
     </>

@@ -61,6 +61,30 @@ const bridge = {
   },
   updateLocalTranscription(enabled: boolean) {
     return ipcRenderer.invoke('settings:update-local-transcription', enabled)
+  },
+  // Model management methods
+  getInstalledModels() {
+    return ipcRenderer.invoke('models:get-installed')
+  },
+  downloadModel(modelId: string) {
+    return ipcRenderer.invoke('models:download', modelId)
+  },
+  deleteModel(modelId: string) {
+    return ipcRenderer.invoke('models:delete', modelId)
+  },
+  switchModel(modelId: string) {
+    return ipcRenderer.invoke('models:switch', modelId)
+  },
+  getModelInfo(modelId: string) {
+    return ipcRenderer.invoke('models:get-info', modelId)
+  },
+  openModelsFolder() {
+    return ipcRenderer.invoke('models:open-folder')
+  },
+  onDownloadProgress(cb: (progress: any) => void) {
+    const handler = (_event: any, progress: any) => cb(progress)
+    ipcRenderer.on('models:download-progress', handler)
+    return () => ipcRenderer.removeListener('models:download-progress', handler)
   }
 }
 

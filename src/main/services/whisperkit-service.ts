@@ -5,6 +5,7 @@ import { existsSync } from 'fs'
 import FormData from 'form-data'
 import { createReadStream } from 'fs'
 import axios from 'axios'
+import { modelDownloadService } from './model-download-service'
 
 interface WhisperKitConfig {
   host: string
@@ -25,20 +26,28 @@ interface TranscriptionResult {
   duration?: number
 }
 
+interface ServerInstance {
+  process: ChildProcess
+  port: number
+  isReady: boolean
+  startPromise: Promise<void> | null
+}
+
 class WhisperKitService {
-  private serverProcess: ChildProcess | null = null
+  private servers: Map<string, ServerInstance> = new Map()
   private config: WhisperKitConfig
-  private isServerReady: boolean = false
-  private serverStartPromise: Promise<void> | null = null
+  private currentModelId: string
+  private basePort: number = 50060
 
   constructor(config?: Partial<WhisperKitConfig>) {
     this.config = {
       host: '127.0.0.1',
       port: 50060,
-      model: 'base',
+      model: 'openai_whisper-base',
       verbose: false,
       ...config
     }
+    this.currentModelId = this.config.model
   }
 
   /**
@@ -63,6 +72,45 @@ class WhisperKitService {
   }
 
   /**
+   * Get the path to a specific model
+   * Checks Application Support first, then falls back to bundled location
+   */
+  private getModelPath(modelId: string): string {
+    // For base model, always use bundled location
+    if (modelId === 'openai_whisper-base') {
+      const { workingDir } = this.getWhisperKitPath()
+      return join(workingDir, 'Models', 'whisperkit-coreml', modelId)
+    }
+
+    // For other models, check Application Support directory first
+    const appSupportPath = join(
+      modelDownloadService.getModelsBasePath(),
+      modelId
+    )
+
+    if (existsSync(appSupportPath)) {
+      return appSupportPath
+    }
+
+    // Fallback to bundled location (for future bundled models)
+    const { workingDir } = this.getWhisperKitPath()
+    return join(workingDir, 'Models', 'whisperkit-coreml', modelId)
+  }
+
+  /**
+   * Get a unique port for a model
+   */
+  private getPortForModel(modelId: string): number {
+    // Base model always uses base port
+    if (modelId === 'openai_whisper-base') {
+      return this.basePort
+    }
+    // Other models use incremental ports
+    const modelIndex = modelId.charCodeAt(0) % 100
+    return this.basePort + 1 + modelIndex
+  }
+
+  /**
    * Check if WhisperKit is available
    */
   public isAvailable(): boolean {
@@ -76,20 +124,89 @@ class WhisperKitService {
   }
 
   /**
-   * Start the WhisperKit local server
+   * Poll server readiness by attempting health checks
    */
-  public async startServer(): Promise<void> {
-    // If server is already starting, wait for that promise
-    if (this.serverStartPromise) {
-      return this.serverStartPromise
+  private async pollServerReadiness(
+    modelId: string,
+    port: number,
+    resolve: () => void,
+    reject: (error: Error) => void,
+    attempt: number
+  ): Promise<void> {
+    const maxAttempts = 180 // 180 attempts = 180 seconds (3 minutes) max wait time
+    const pollInterval = 1000 // 1 second between attempts
+
+    if (attempt >= maxAttempts) {
+      const error = new Error(`WhisperKit server for ${modelId} failed to become ready within 3 minutes`)
+      console.error('[WhisperKit]', error.message)
+      
+      const server = this.servers.get(modelId)
+      if (server) {
+        server.startPromise = null
+      }
+      
+      reject(error)
+      return
     }
 
-    // If server is already running, return immediately
-    if (this.isServerReady && this.serverProcess) {
+    try {
+      // Try to connect to the server
+      const url = `http://${this.config.host}:${port}`
+      await axios.get(url, { 
+        timeout: 2000,
+        validateStatus: () => true // Accept any status code
+      })
+      
+      // Server responded - it's ready!
+      const server = this.servers.get(modelId)
+      if (server) {
+        server.isReady = true
+        server.startPromise = null
+      }
+      
+      console.log(
+        `[WhisperKit] Server for ${modelId} ready at http://${this.config.host}:${port} (took ${attempt + 1} attempts)`
+      )
+      resolve()
+    } catch (error) {
+      // Server not ready yet, try again
+      if (attempt % 5 === 0 && attempt > 0) {
+        console.log(`[WhisperKit] Waiting for ${modelId} server... (attempt ${attempt + 1}/${maxAttempts})`)
+      }
+      
+      setTimeout(() => {
+        this.pollServerReadiness(modelId, port, resolve, reject, attempt + 1)
+      }, pollInterval)
+    }
+  }
+
+  /**
+   * Start a WhisperKit server for a specific model
+   */
+  public async startServerForModel(modelId: string): Promise<void> {
+    // Check if server already exists and is ready
+    const existingServer = this.servers.get(modelId)
+    if (existingServer?.isReady) {
       return Promise.resolve()
     }
 
-    this.serverStartPromise = new Promise<void>((resolve, reject) => {
+    // If server is starting, wait for it
+    if (existingServer?.startPromise) {
+      return existingServer.startPromise
+    }
+
+    const port = this.getPortForModel(modelId)
+    
+    // Create placeholder server instance first to avoid circular reference
+    const serverInstance: ServerInstance = {
+      process: null as any,
+      port,
+      isReady: false,
+      startPromise: null
+    }
+    this.servers.set(modelId, serverInstance)
+    
+    const startPromise = new Promise<void>((resolve, reject) => {
       try {
         const { binaryPath, workingDir } = this.getWhisperKitPath()
 
@@ -98,19 +215,29 @@ class WhisperKitService {
             'WhisperKit binary not found. Please ensure WhisperKit is built and available.'
           )
           console.error(error.message)
-          this.serverStartPromise = null
+          this.servers.delete(modelId)
           reject(error)
           return
         }
 
-        console.log('[WhisperKit] Starting server...')
+        console.log(`[WhisperKit] Starting server for model: ${modelId}`)
         console.log('[WhisperKit] Binary path:', binaryPath)
         console.log('[WhisperKit] Working directory:', workingDir)
-        console.log('[WhisperKit] Model:', this.config.model)
+        console.log('[WhisperKit] Port:', port)
 
-        // Model path should point to the local model directory
-        const modelPath = join(workingDir, 'Models', 'whisperkit-coreml', this.config.model)
+        // Get model path (checks Application Support or bundled location)
+        const modelPath = this.getModelPath(modelId)
         console.log('[WhisperKit] Model path:', modelPath)
+
+        if (!existsSync(modelPath)) {
+          const error = new Error(
+            `Model not found at path: ${modelPath}. Please download the model first.`
+          )
+          console.error(error.message)
+          this.servers.delete(modelId)
+          reject(error)
+          return
+        }
         
         const args = [
           'serve',
@@ -119,125 +246,118 @@ class WhisperKitService {
           '--host',
           this.config.host,
           '--port',
-          this.config.port.toString()
+          port.toString()
         ]
 
         if (this.config.verbose) {
           args.push('--verbose')
         }
 
-        this.serverProcess = spawn(binaryPath, args, {
+        const serverProcess = spawn(binaryPath, args, {
           cwd: workingDir,
           stdio: ['pipe', 'pipe', 'pipe'],
           env: { ...process.env }
         })
 
-        let serverOutput = ''
+        // Update server instance with actual process
+        const server = this.servers.get(modelId)
+        if (server) {
+          server.process = serverProcess
+        }
 
-        this.serverProcess.stdout?.on('data', (data: Buffer) => {
+        serverProcess.stdout?.on('data', (data: Buffer) => {
           const output = data.toString()
-          serverOutput += output
           if (this.config.verbose) {
-            console.log('[WhisperKit Server]:', output)
-          }
-
-          // Check if server is ready (look for typical server startup messages)
-          if (
-            output.includes('Server running') ||
-            output.includes('listening') ||
-            output.includes(`${this.config.port}`)
-          ) {
-            if (!this.isServerReady) {
-              this.isServerReady = true
-              console.log(
-                `[WhisperKit] Server ready at http://${this.config.host}:${this.config.port}`
-              )
-              resolve()
-            }
+            console.log(`[WhisperKit ${modelId}]:`, output)
           }
         })
 
-        this.serverProcess.stderr?.on('data', (data: Buffer) => {
+        serverProcess.stderr?.on('data', (data: Buffer) => {
           const error = data.toString()
-          console.error('[WhisperKit Server Error]:', error)
-          
-          // Some servers log startup info to stderr, check for ready state
-          if (
-            error.includes('Server running') ||
-            error.includes('listening') ||
-            error.includes(`${this.config.port}`)
-          ) {
-            if (!this.isServerReady) {
-              this.isServerReady = true
-              console.log(
-                `[WhisperKit] Server ready at http://${this.config.host}:${this.config.port}`
-              )
-              resolve()
-            }
+          if (this.config.verbose) {
+            console.error(`[WhisperKit ${modelId} Error]:`, error)
           }
         })
 
-        this.serverProcess.on('error', (error) => {
-          console.error('[WhisperKit] Server process error:', error)
-          this.isServerReady = false
-          this.serverStartPromise = null
+        serverProcess.on('error', (error) => {
+          console.error(`[WhisperKit] Server process error for ${modelId}:`, error)
+          this.servers.delete(modelId)
           reject(error)
         })
 
-        this.serverProcess.on('exit', (code, signal) => {
-          console.log(`[WhisperKit] Server exited with code ${code} and signal ${signal}`)
-          this.isServerReady = false
-          this.serverProcess = null
-          this.serverStartPromise = null
+        serverProcess.on('exit', (code, signal) => {
+          console.log(`[WhisperKit] Server for ${modelId} exited with code ${code} and signal ${signal}`)
+          this.servers.delete(modelId)
         })
 
-        // Timeout fallback: assume server is ready after 5 seconds if no explicit ready message
+        // Wait a moment for server to start binding, then poll for readiness
         setTimeout(() => {
-          if (!this.isServerReady) {
-            console.log('[WhisperKit] Server startup timeout - assuming ready')
-            this.isServerReady = true
-            resolve()
-          }
-        }, 5000)
+          this.pollServerReadiness(modelId, port, resolve, reject, 0)
+        }, 2000)
       } catch (error) {
-        console.error('[WhisperKit] Failed to start server:', error)
-        this.serverStartPromise = null
+        console.error(`[WhisperKit] Failed to start server for ${modelId}:`, error)
+        this.servers.delete(modelId)
         reject(error)
       }
     })
 
-    return this.serverStartPromise
+    // Update the server instance with the promise
+    serverInstance.startPromise = startPromise
+
+    return startPromise
   }
 
   /**
-   * Stop the WhisperKit server
+   * Start the WhisperKit local server for current model
    */
-  public stopServer(): void {
-    if (this.serverProcess) {
-      console.log('[WhisperKit] Stopping server...')
-      this.serverProcess.kill('SIGTERM')
-      this.serverProcess = null
-      this.isServerReady = false
-      this.serverStartPromise = null
+  public async startServer(): Promise<void> {
+    return this.startServerForModel(this.currentModelId)
+  }
+
+  /**
+   * Stop a specific server
+   */
+  private stopServerForModel(modelId: string): void {
+    const server = this.servers.get(modelId)
+    if (server) {
+      console.log(`[WhisperKit] Stopping server for ${modelId}...`)
+      server.process.kill('SIGTERM')
+      this.servers.delete(modelId)
     }
   }
 
   /**
-   * Transcribe audio file using the local WhisperKit server
+   * Stop all WhisperKit servers
+   */
+  public stopServer(): void {
+    console.log('[WhisperKit] Stopping all servers...')
+    for (const [modelId] of this.servers) {
+      this.stopServerForModel(modelId)
+    }
+  }
+
+  /**
+   * Transcribe audio file using a specific model
    */
   public async transcribe(
     audioFilePath: string,
-    options: TranscriptionOptions = {}
+    options: TranscriptionOptions = {},
+    modelId?: string
   ): Promise<TranscriptionResult> {
+    const targetModelId = modelId || this.currentModelId
+    const server = this.servers.get(targetModelId)
+
     // Ensure server is running
-    if (!this.isServerReady) {
-      await this.startServer()
+    if (!server?.isReady) {
+      await this.startServerForModel(targetModelId)
     }
+
+    const port = this.getPortForModel(targetModelId)
 
     try {
       const formData = new FormData()
       formData.append('file', createReadStream(audioFilePath))
-      formData.append('model', this.config.model)
+      formData.append('model', targetModelId)
 
       if (options.language) {
         formData.append('language', options.language)
@@ -249,9 +369,9 @@ class WhisperKitService {
 
       formData.append('response_format', 'verbose_json')
 
-      const url = `http://${this.config.host}:${this.config.port}/v1/audio/transcriptions`
+      const url = `http://${this.config.host}:${port}/v1/audio/transcriptions`
 
-      console.log('[WhisperKit] Sending transcription request to:', url)
+      console.log(`[WhisperKit] Sending transcription request to ${targetModelId}:`, url)
 
       const response = await axios.post(url, formData, {
         headers: {
@@ -269,40 +389,54 @@ class WhisperKitService {
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error('[WhisperKit] Transcription request failed:', {
+        console.error(`[WhisperKit] Transcription request failed for ${targetModelId}:`, {
           message: error.message,
           code: error.code,
           response: error.response?.data
         })
       } else {
-        console.error('[WhisperKit] Transcription failed:', error)
+        console.error(`[WhisperKit] Transcription failed for ${targetModelId}:`, error)
       }
       throw error
     }
   }
 
   /**
-   * Check if the server is running and healthy
+   * Check if a specific server is running and healthy (fast check)
    */
-  public async healthCheck(): Promise<boolean> {
-    if (!this.isServerReady) {
+  public async healthCheck(modelId?: string): Promise<boolean> {
+    const targetModelId = modelId || this.currentModelId
+    const server = this.servers.get(targetModelId)
+    
+    if (!server?.isReady) {
       return false
     }
 
+    const port = this.getPortForModel(targetModelId)
+
     try {
-      const url = `http://${this.config.host}:${this.config.port}/health`
-      await axios.get(url, { timeout: 2000 })
+      const url = `http://${this.config.host}:${port}/health`
+      await axios.get(url, { timeout: 500 })
       return true
     } catch (error) {
       // Health endpoint might not exist, try a simple connection test
       try {
-        const url = `http://${this.config.host}:${this.config.port}`
-        await axios.get(url, { timeout: 2000 })
+        const url = `http://${this.config.host}:${port}`
+        await axios.get(url, { timeout: 500 })
         return true
       } catch {
         return false
       }
     }
+  }
+
+  /**
+   * Check if a server is ready without making a network request
+   */
+  public isServerReady(modelId?: string): boolean {
+    const targetModelId = modelId || this.currentModelId
+    const server = this.servers.get(targetModelId)
+    return server?.isReady || false
   }
 
   /**
@@ -312,18 +446,102 @@ class WhisperKitService {
     isRunning: boolean
     isReady: boolean
     config: WhisperKitConfig
+    currentModel: string
+    servers: Map<string, { port: number; isReady: boolean }>
   } {
-    return {
-      isRunning: this.serverProcess !== null,
-      isReady: this.isServerReady,
-      config: this.config
+    const currentServer = this.servers.get(this.currentModelId)
+    const serversStatus = new Map<string, { port: number; isReady: boolean }>()
+    
+    for (const [modelId, server] of this.servers) {
+      serversStatus.set(modelId, {
+        port: server.port,
+        isReady: server.isReady
+      })
     }
+
+    return {
+      isRunning: currentServer !== undefined,
+      isReady: currentServer?.isReady || false,
+      config: this.config,
+      currentModel: this.currentModelId,
+      servers: serversStatus
+    }
+  }
+
+  /**
+   * Switch to a different model
+   * Starts a new server on a different port while keeping the old one running
+   */
+  public async switchModel(modelId: string): Promise<void> {
+    console.log('[WhisperKit] Switching model to:', modelId)
+
+    // Check if model exists
+    const modelPath = this.getModelPath(modelId)
+    if (!existsSync(modelPath)) {
+      throw new Error(`Model ${modelId} is not installed. Please download it first.`)
+    }
+
+    // If already on this model and it's ready, do nothing
+    if (this.currentModelId === modelId && this.servers.get(modelId)?.isReady) {
+      console.log('[WhisperKit] Already on model:', modelId)
+      return
+    }
+
+    const oldModelId = this.currentModelId
+    
+    // Update current model (but keep old server running)
+    this.currentModelId = modelId
+    this.config.model = modelId
+
+    try {
+      // Start server with new model (this will take time, but won't block)
+      // The new server will run on a different port
+      await this.startServerForModel(modelId)
+      
+      // New server is ready, stop old server if it's not the base model
+      if (oldModelId !== 'openai_whisper-base' && oldModelId !== modelId) {
+        console.log('[WhisperKit] New model ready, stopping old server:', oldModelId)
+        this.stopServerForModel(oldModelId)
+      }
+
+      console.log('[WhisperKit] Model switched successfully to:', modelId)
+    } catch (error) {
+      // If new model fails, revert current model pointer
+      console.error('[WhisperKit] Failed to switch model, reverting to:', oldModelId)
+      this.currentModelId = oldModelId
+      this.config.model = oldModelId
+      
+      throw error
+    }
+  }
+
+  /**
+   * Get the current model ID
+   */
+  public getCurrentModel(): string {
+    return this.currentModelId
+  }
+
+  /**
+   * Get list of available models (both bundled and downloaded)
+   */
+  public async getAvailableModels(): Promise<string[]> {
+    const models: Set<string> = new Set()
+
+    // Add bundled base model
+    models.add('openai_whisper-base')
+
+    // Add downloaded models
+    const downloadedModels = await modelDownloadService.getInstalledModels()
+    downloadedModels.forEach((model) => models.add(model))
+
+    return Array.from(models)
   }
 }
 
 // Export singleton instance
 export const whisperKitService = new WhisperKitService({
-  model: 'openai_whisper-base', // This matches the downloaded model folder name
+  model: 'openai_whisper-base', // Default to base model
   verbose: true
 })
 

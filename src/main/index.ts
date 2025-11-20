@@ -9,6 +9,8 @@ import Groq from 'groq-sdk'
 import { enhanceTranscription } from './services/llm-enhancer'
 import { hotkeyManager, HotkeyMode } from './services/hotkey-manager'
 import { whisperKitService } from './services/whisperkit-service'
+import { modelDownloadService } from './services/model-download-service'
+import { shell } from 'electron'
 
 config({ path: join(__dirname, '../../.env') })
 
@@ -301,14 +303,30 @@ app.whenReady().then(async () => {
   hotkeyManager.registerHotkey('assistant', 'Option ⌥ + Shift ⇧ + S')
 
   // Initialize WhisperKit if available and local transcription is enabled
+  // Always start base model as reliable fallback, start current model in background
   if (localTranscriptionEnabled && whisperKitService.isAvailable()) {
-    console.log('[Main] WhisperKit is available, starting server...')
-    try {
-      await whisperKitService.startServer()
-      console.log('[Main] WhisperKit server started successfully')
-    } catch (error) {
-      console.error('[Main] Failed to start WhisperKit server:', error)
-      console.log('[Main] Will fall back to Groq API for transcription')
+    console.log('[Main] WhisperKit is available, starting servers in background...')
+    
+    // Always start base model first (fast and reliable fallback)
+    whisperKitService.startServerForModel('openai_whisper-base')
+      .then(() => {
+        console.log('[Main] Base model server started successfully')
+      })
+      .catch((error) => {
+        console.error('[Main] Failed to start base model server:', error)
+      })
+    
+    // Start current model if it's not the base model
+    const currentModel = whisperKitService.getCurrentModel()
+    if (currentModel !== 'openai_whisper-base') {
+      whisperKitService.startServer()
+        .then(() => {
+          console.log('[Main] Current model server started successfully')
+        })
+        .catch((error) => {
+          console.error('[Main] Failed to start current model server:', error)
+          console.log('[Main] Will fall back to base model or Groq API for transcription')
+        })
     }
   } else if (localTranscriptionEnabled) {
     console.log('[Main] WhisperKit not available, will use Groq API fallback')
@@ -361,17 +379,25 @@ app.whenReady().then(async () => {
     localTranscriptionEnabled = enabled
     console.log('Updated local transcription enabled:', localTranscriptionEnabled)
     
-    // Start or stop WhisperKit server based on setting
+    // Start or stop WhisperKit servers based on setting
     if (enabled && whisperKitService.isAvailable()) {
       try {
-        await whisperKitService.startServer()
-        console.log('[Main] WhisperKit server started')
+        // Start base model as fallback
+        await whisperKitService.startServerForModel('openai_whisper-base')
+        console.log('[Main] Base model server started')
+        
+        // Start current model if different
+        const currentModel = whisperKitService.getCurrentModel()
+        if (currentModel !== 'openai_whisper-base') {
+          await whisperKitService.startServer()
+          console.log('[Main] Current model server started')
+        }
       } catch (error) {
-        console.error('[Main] Failed to start WhisperKit server:', error)
+        console.error('[Main] Failed to start WhisperKit servers:', error)
       }
     } else if (!enabled) {
       whisperKitService.stopServer()
-      console.log('[Main] WhisperKit server stopped')
+      console.log('[Main] WhisperKit servers stopped')
     }
   })
 
@@ -422,6 +448,98 @@ app.whenReady().then(async () => {
     }
   )
 
+  // Model management IPC handlers
+  ipcMain.handle('models:get-installed', async () => {
+    try {
+      const installedModels = await modelDownloadService.getInstalledModels()
+      console.log('[Models] Installed models:', installedModels)
+      return installedModels
+    } catch (error) {
+      console.error('[Models] Failed to get installed models:', error)
+      return []
+    }
+  })
+
+  ipcMain.handle('models:download', async (_evt, modelId: string) => {
+    try {
+      console.log('[Models] Starting download for:', modelId)
+      
+      // Register progress callback
+      const mainWindow = findWindowByType('main')
+      if (mainWindow) {
+        modelDownloadService.onProgress(modelId, (progress) => {
+          mainWindow.webContents.send('models:download-progress', progress)
+        })
+      }
+
+      await modelDownloadService.downloadModel(modelId)
+      
+      // Cleanup progress callback
+      modelDownloadService.offProgress(modelId)
+      
+      console.log('[Models] Download completed:', modelId)
+    } catch (error) {
+      console.error('[Models] Download failed:', error)
+      modelDownloadService.offProgress(modelId)
+      throw error
+    }
+  })
+
+  ipcMain.handle('models:delete', async (_evt, modelId: string) => {
+    try {
+      console.log('[Models] Deleting model:', modelId)
+      await modelDownloadService.deleteModel(modelId)
+      console.log('[Models] Model deleted:', modelId)
+    } catch (error) {
+      console.error('[Models] Delete failed:', error)
+      throw error
+    }
+  })
+
+  ipcMain.handle('models:switch', async (_evt, modelId: string) => {
+    // Start the switch in the background, don't wait for it
+    console.log('[Models] Starting background switch to model:', modelId)
+    
+    // Fire and forget - the switch will happen in the background
+    whisperKitService.switchModel(modelId).then(() => {
+      console.log('[Models] Background model switch completed successfully')
+      
+      // Ensure base model stays running as fallback
+      if (modelId !== 'openai_whisper-base' && !whisperKitService.isServerReady('openai_whisper-base')) {
+        whisperKitService.startServerForModel('openai_whisper-base').catch((err) => {
+          console.error('[Models] Failed to ensure base model running:', err)
+        })
+      }
+    }).catch((error) => {
+      console.error('[Models] Background switch failed:', error)
+      // Server will fall back to Groq or base model during this time
+    })
+    
+    // Return immediately so UI isn't blocked
+    return Promise.resolve()
+  })
+
+  ipcMain.handle('models:get-info', async (_evt, modelId: string) => {
+    try {
+      const info = await modelDownloadService.getModelInfo(modelId)
+      return info
+    } catch (error) {
+      console.error('[Models] Failed to get model info:', error)
+      throw error
+    }
+  })
+
+  ipcMain.handle('models:open-folder', async () => {
+    try {
+      const modelsPath = modelDownloadService.getModelsBasePath()
+      console.log('[Models] Opening models folder:', modelsPath)
+      await shell.openPath(modelsPath)
+    } catch (error) {
+      console.error('[Models] Failed to open models folder:', error)
+      throw error
+    }
+  })
+
   // Transcription handler
   ipcMain.handle(
     'stt:transcribe',
@@ -436,26 +554,33 @@ app.whenReady().then(async () => {
 
       // Try local transcription first if enabled
       if (localTranscriptionEnabled && whisperKitService.isAvailable()) {
-        try {
-          console.log('[Main] Attempting local transcription with WhisperKit...')
-          const result = await whisperKitService.transcribe(file, {
-            temperature: 0
-          })
-          transcription = { text: result.text }
-          console.log('[Main] Local transcription successful')
-        } catch (error) {
-          console.error('[Main] Local transcription failed, falling back to Groq:', error)
-          // Fall through to Groq API
-          transcription = { text: '' }
+        const currentModel = whisperKitService.getCurrentModel()
+        
+        // Fast check: is the current model server ready?
+        if (whisperKitService.isServerReady(currentModel)) {
+          try {
+            console.log(`[Main] Using ready server for ${currentModel}...`)
+            const result = await whisperKitService.transcribe(file, {
+              temperature: 0
+            })
+            transcription = { text: result.text }
+            console.log('[Main] Local transcription successful')
+          } catch (error) {
+            console.error('[Main] Local transcription failed:', error)
+            transcription = { text: '' }
+          }
+        } else {
+          console.log(`[Main] Server for ${currentModel} not ready, will try Groq then base model`)
         }
       }
 
-      // Use Groq API if local transcription is disabled or failed
+      // Use Groq API if local transcription is disabled, not ready, or failed
       if (!transcription.text || transcription.text.length === 0) {
         console.log('[Main] Using Groq API for transcription...')
         const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
         let retries = 3
+        let groqFailed = false
         while (retries > 0) {
           try {
             transcription = await groq.audio.transcriptions.create({
@@ -469,12 +594,46 @@ app.whenReady().then(async () => {
           } catch (error) {
             retries--
             if (retries === 0) {
+              groqFailed = true
               console.error('STT failed after 3 attempts:', error)
-              throw error
+            } else {
+              console.log(`STT connection failed, retrying... (${retries} attempts left)`)
+              await new Promise((resolve) => setTimeout(resolve, 1000))
             }
-            console.log(`STT connection failed, retrying... (${retries} attempts left)`)
-            await new Promise((resolve) => setTimeout(resolve, 1000))
           }
+        }
+
+        // If Groq failed, try base model as final fallback
+        if (groqFailed && whisperKitService.isAvailable()) {
+          try {
+            console.log('[Main] Groq failed, attempting fallback to base model...')
+            
+            // Check if base model is ready, if not start it
+            if (!whisperKitService.isServerReady('openai_whisper-base')) {
+              console.log('[Main] Starting base model server...')
+              // Start base model server, but don't wait forever
+              const baseModelPromise = whisperKitService.startServerForModel('openai_whisper-base')
+              // Wait max 30 seconds for base model to start
+              const timeout = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Base model timeout')), 30000)
+              )
+              await Promise.race([baseModelPromise, timeout]).catch((err) => {
+                console.error('[Main] Base model start timeout:', err)
+                throw err
+              })
+            }
+            
+            const result = await whisperKitService.transcribe(file, {
+              temperature: 0
+            }, 'openai_whisper-base')
+            transcription = { text: result.text }
+            console.log('[Main] Base model transcription successful')
+          } catch (baseError) {
+            console.error('[Main] Base model fallback failed:', baseError)
+            throw new Error('All transcription methods failed')
+          }
+        } else if (groqFailed) {
+          throw new Error('Transcription failed: Both WhisperKit and Groq unavailable')
         }
       }
 
