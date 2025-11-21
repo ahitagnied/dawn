@@ -2,7 +2,7 @@ import { app, BrowserWindow, screen, ipcMain, clipboard, Tray, Menu } from 'elec
 import { join } from 'path'
 import { electronApp, is } from '@electron-toolkit/utils'
 import { execFile } from 'node:child_process'
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { config } from 'dotenv'
 import Groq from 'groq-sdk'
@@ -13,6 +13,39 @@ import { modelDownloadService } from './services/model-download-service'
 import { shell } from 'electron'
 
 config({ path: join(__dirname, '../../.env') })
+
+// Settings persistence
+interface AppSettings {
+  autoCopy?: boolean
+  pressEnterAfter?: boolean
+  selectedModelId?: string
+}
+
+const getSettingsPath = (): string => {
+  return join(app.getPath('userData'), 'settings.json')
+}
+
+const loadSettings = (): AppSettings => {
+  try {
+    const settingsPath = getSettingsPath()
+    if (existsSync(settingsPath)) {
+      const data = readFileSync(settingsPath, 'utf-8')
+      return JSON.parse(data)
+    }
+  } catch (error) {
+    console.error('[Settings] Failed to load settings:', error)
+  }
+  return {}
+}
+
+const saveSettings = (settings: AppSettings): void => {
+  try {
+    const settingsPath = getSettingsPath()
+    writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8')
+  } catch (error) {
+    console.error('[Settings] Failed to save settings:', error)
+  }
+}
 
 type RecordingMode = 'push-to-talk' | 'transcription' | 'assistant' | 'idle'
 
@@ -29,6 +62,7 @@ let selectedTextBeforeRecording: string | null = null
 let autoCopyEnabled = true
 let pressEnterAfterEnabled = false
 let lastRecordingMode: RecordingMode = 'idle'
+let selectedModelId = 'openai_whisper-base' // Default model
 
 function createOverlayWindow(): void {
   const overlayWindow = new BrowserWindow({
@@ -287,6 +321,19 @@ const handleRecordingCancel = async (mode: HotkeyMode): Promise<void> => {
 app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.electron')
 
+  // Load persisted settings
+  const settings = loadSettings()
+  if (settings.autoCopy !== undefined) {
+    autoCopyEnabled = settings.autoCopy
+  }
+  if (settings.pressEnterAfter !== undefined) {
+    pressEnterAfterEnabled = settings.pressEnterAfter
+  }
+  if (settings.selectedModelId !== undefined) {
+    selectedModelId = settings.selectedModelId
+    console.log('[Main] Loaded persisted model selection:', selectedModelId)
+  }
+
   createMainWindow()
   createOverlayWindow()
 
@@ -303,28 +350,37 @@ app.whenReady().then(async () => {
   hotkeyManager.registerHotkey('assistant', 'Option ⌥ + Shift ⇧ + S')
 
   // Initialize WhisperKit if available and local transcription is enabled
-  // Always start base model as reliable fallback, start current model in background
+  // Start base model and selected model in parallel (or just base if that's selected)
   if (localTranscriptionEnabled && whisperKitService.isAvailable()) {
     console.log('[Main] WhisperKit is available, starting servers in background...')
+    console.log('[Main] Selected model:', selectedModelId)
     
-    // Always start base model first (fast and reliable fallback)
-    whisperKitService.startServerForModel('openai_whisper-base')
-      .then(() => {
-        console.log('[Main] Base model server started successfully')
-      })
-      .catch((error) => {
-        console.error('[Main] Failed to start base model server:', error)
-      })
-    
-    // Start current model if it's not the base model
-    const currentModel = whisperKitService.getCurrentModel()
-    if (currentModel !== 'openai_whisper-base') {
-      whisperKitService.startServer()
+    if (selectedModelId === 'openai_whisper-base') {
+      // Only start base model
+      whisperKitService.startServerForModel('openai_whisper-base')
         .then(() => {
-          console.log('[Main] Current model server started successfully')
+          console.log('[Main] Base model server started successfully')
         })
         .catch((error) => {
-          console.error('[Main] Failed to start current model server:', error)
+          console.error('[Main] Failed to start base model server:', error)
+        })
+    } else {
+      // Start both base (fallback) and selected model in parallel
+      whisperKitService.startServerForModel('openai_whisper-base')
+        .then(() => {
+          console.log('[Main] Base model server started successfully')
+        })
+        .catch((error) => {
+          console.error('[Main] Failed to start base model server:', error)
+        })
+      
+      // Set the selected model as current and start it
+      whisperKitService.switchModel(selectedModelId)
+        .then(() => {
+          console.log('[Main] Selected model server started successfully')
+        })
+        .catch((error) => {
+          console.error('[Main] Failed to start selected model server:', error)
           console.log('[Main] Will fall back to base model or Groq API for transcription')
         })
     }
@@ -422,18 +478,21 @@ app.whenReady().then(async () => {
   ipcMain.handle('settings:get', async () => {
     return {
       autoCopy: autoCopyEnabled,
-      pressEnterAfter: pressEnterAfterEnabled
+      pressEnterAfter: pressEnterAfterEnabled,
+      selectedModelId
     }
   })
 
   ipcMain.handle('settings:update-auto-copy', async (_evt, enabled: boolean) => {
     autoCopyEnabled = enabled
     console.log('Updated auto copy enabled:', autoCopyEnabled)
+    saveSettings({ autoCopy: autoCopyEnabled, pressEnterAfter: pressEnterAfterEnabled, selectedModelId })
   })
 
   ipcMain.handle('settings:update-press-enter-after', async (_evt, enabled: boolean) => {
     pressEnterAfterEnabled = enabled
     console.log('Updated press enter after enabled:', pressEnterAfterEnabled)
+    saveSettings({ autoCopy: autoCopyEnabled, pressEnterAfter: pressEnterAfterEnabled, selectedModelId })
   })
 
   ipcMain.handle(
@@ -445,6 +504,7 @@ app.whenReady().then(async () => {
         autoCopy: autoCopyEnabled,
         pressEnterAfter: pressEnterAfterEnabled
       })
+      saveSettings({ autoCopy: autoCopyEnabled, pressEnterAfter: pressEnterAfterEnabled, selectedModelId })
     }
   )
 
@@ -500,11 +560,16 @@ app.whenReady().then(async () => {
     // Start the switch in the background, don't wait for it
     console.log('[Models] Starting background switch to model:', modelId)
     
+    // Update and persist selected model
+    selectedModelId = modelId
+    saveSettings({ autoCopy: autoCopyEnabled, pressEnterAfter: pressEnterAfterEnabled, selectedModelId })
+    console.log('[Models] Persisted model selection:', selectedModelId)
+    
     // Fire and forget - the switch will happen in the background
     whisperKitService.switchModel(modelId).then(() => {
       console.log('[Models] Background model switch completed successfully')
       
-      // Ensure base model stays running as fallback
+      // Ensure base model stays running as fallback (unless base is selected)
       if (modelId !== 'openai_whisper-base' && !whisperKitService.isServerReady('openai_whisper-base')) {
         whisperKitService.startServerForModel('openai_whisper-base').catch((err) => {
           console.error('[Models] Failed to ensure base model running:', err)
@@ -527,6 +592,10 @@ app.whenReady().then(async () => {
       console.error('[Models] Failed to get model info:', error)
       throw error
     }
+  })
+
+  ipcMain.handle('models:get-current', async () => {
+    return selectedModelId
   })
 
   ipcMain.handle('models:open-folder', async () => {

@@ -133,11 +133,11 @@ class WhisperKitService {
     reject: (error: Error) => void,
     attempt: number
   ): Promise<void> {
-    const maxAttempts = 180 // 180 attempts = 180 seconds (3 minutes) max wait time
+    const maxAttempts = 900 // 900 attempts = 900 seconds (15 minutes) max wait time
     const pollInterval = 1000 // 1 second between attempts
 
     if (attempt >= maxAttempts) {
-      const error = new Error(`WhisperKit server for ${modelId} failed to become ready within 3 minutes`)
+      const error = new Error(`WhisperKit server for ${modelId} failed to become ready within 15 minutes`)
       console.error('[WhisperKit]', error.message)
       
       const server = this.servers.get(modelId)

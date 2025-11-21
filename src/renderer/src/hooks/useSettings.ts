@@ -54,6 +54,24 @@ export function useSettings() {
     return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS
   })
 
+  // Sync selectedModel from main process on mount
+  useEffect(() => {
+    const syncModel = async () => {
+      if (window.bridge?.getCurrentModel) {
+        try {
+          const currentModel = await window.bridge.getCurrentModel()
+          if (currentModel && currentModel !== settings.selectedModel) {
+            console.log('[Settings] Syncing model from main process:', currentModel)
+            setSettings((prev) => ({ ...prev, selectedModel: currentModel }))
+          }
+        } catch (error) {
+          console.error('[Settings] Failed to sync model from main process:', error)
+        }
+      }
+    }
+    syncModel()
+  }, []) // Only run on mount
+
   useEffect(() => {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
   }, [settings])

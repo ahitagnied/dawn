@@ -75,6 +75,9 @@ const bridge = {
   switchModel(modelId: string) {
     return ipcRenderer.invoke('models:switch', modelId)
   },
+  getCurrentModel() {
+    return ipcRenderer.invoke('models:get-current')
+  },
   getModelInfo(modelId: string) {
     return ipcRenderer.invoke('models:get-info', modelId)
   },
