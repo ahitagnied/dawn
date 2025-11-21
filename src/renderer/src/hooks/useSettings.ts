@@ -14,6 +14,7 @@ export interface Settings {
   pushToTalk: boolean
   pushToTalkHotkey: string
   localTranscription: boolean
+  selectedModel: string
   transcriptionModeHotkey: string
   assistantModeEnabled: boolean
   assistantModeHotkey: string
@@ -33,6 +34,7 @@ const DEFAULT_SETTINGS: Settings = {
   pushToTalk: true,
   pushToTalkHotkey: 'Option ⌥',
   localTranscription: true,
+  selectedModel: 'openai_whisper-base',
   transcriptionModeHotkey: 'Option ⌥ + Shift ⇧ + Z',
   assistantModeEnabled: true,
   assistantModeHotkey: 'Option ⌥ + Shift ⇧ + S',
@@ -51,6 +53,24 @@ export function useSettings() {
     const saved = localStorage.getItem(SETTINGS_STORAGE_KEY)
     return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS
   })
+
+  // Sync selectedModel from main process on mount
+  useEffect(() => {
+    const syncModel = async () => {
+      if (window.bridge?.getCurrentModel) {
+        try {
+          const currentModel = await window.bridge.getCurrentModel()
+          if (currentModel && currentModel !== settings.selectedModel) {
+            console.log('[Settings] Syncing model from main process:', currentModel)
+            setSettings((prev) => ({ ...prev, selectedModel: currentModel }))
+          }
+        } catch (error) {
+          console.error('[Settings] Failed to sync model from main process:', error)
+        }
+      }
+    }
+    syncModel()
+  }, []) // Only run on mount
 
   useEffect(() => {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))

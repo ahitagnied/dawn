@@ -15,6 +15,7 @@
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
+    "build:whisperkit": "bash scripts/build-whisperkit-bundle.sh",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "electron-vite build && electron-builder --mac",
@@ -23,9 +24,11 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@types/form-data": "^2.2.1",
     "axios": "^1.12.2",
     "dotenv": "^17.2.3",
     "electron-updater": "^6.3.9",
+    "form-data": "^4.0.4",
     "groq-sdk": "^0.34.0",
     "uiohook-napi": "^1.5.4"
   },

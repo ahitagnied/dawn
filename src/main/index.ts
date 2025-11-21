@@ -2,14 +2,50 @@ import { app, BrowserWindow, screen, ipcMain, clipboard, Tray, Menu } from 'elec
 import { join } from 'path'
 import { electronApp, is } from '@electron-toolkit/utils'
 import { execFile } from 'node:child_process'
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { config } from 'dotenv'
 import Groq from 'groq-sdk'
 import { enhanceTranscription } from './services/llm-enhancer'
 import { hotkeyManager, HotkeyMode } from './services/hotkey-manager'
+import { whisperKitService } from './services/whisperkit-service'
+import { modelDownloadService } from './services/model-download-service'
+import { shell } from 'electron'
 
 config({ path: join(__dirname, '../../.env') })
+
+// Settings persistence
+interface AppSettings {
+  autoCopy?: boolean
+  pressEnterAfter?: boolean
+  selectedModelId?: string
+}
+
+const getSettingsPath = (): string => {
+  return join(app.getPath('userData'), 'settings.json')
+}
+
+const loadSettings = (): AppSettings => {
+  try {
+    const settingsPath = getSettingsPath()
+    if (existsSync(settingsPath)) {
+      const data = readFileSync(settingsPath, 'utf-8')
+      return JSON.parse(data)
+    }
+  } catch (error) {
+    console.error('[Settings] Failed to load settings:', error)
+  }
+  return {}
+}
+
+const saveSettings = (settings: AppSettings): void => {
+  try {
+    const settingsPath = getSettingsPath()
+    writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8')
+  } catch (error) {
+    console.error('[Settings] Failed to save settings:', error)
+  }
+}
 
 type RecordingMode = 'push-to-talk' | 'transcription' | 'assistant' | 'idle'
 
@@ -18,6 +54,7 @@ let previousVolume = 0
 let autoMuteEnabled = true
 let soundEffectsEnabled = false
 let smartTranscriptionEnabled = false
+let localTranscriptionEnabled = true
 let assistantModeEnabled = true
 let assistantScreenshotEnabled = false
 const assistantModel = 'meta-llama/llama-4-maverick-17b-128e-instruct'
@@ -25,6 +62,7 @@ let selectedTextBeforeRecording: string | null = null
 let autoCopyEnabled = true
 let pressEnterAfterEnabled = false
 let lastRecordingMode: RecordingMode = 'idle'
+let selectedModelId = 'openai_whisper-base' // Default model
 
 function createOverlayWindow(): void {
   const overlayWindow = new BrowserWindow({
@@ -280,8 +318,21 @@ const handleRecordingCancel = async (mode: HotkeyMode): Promise<void> => {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.electron')
+
+  // Load persisted settings
+  const settings = loadSettings()
+  if (settings.autoCopy !== undefined) {
+    autoCopyEnabled = settings.autoCopy
+  }
+  if (settings.pressEnterAfter !== undefined) {
+    pressEnterAfterEnabled = settings.pressEnterAfter
+  }
+  if (settings.selectedModelId !== undefined) {
+    selectedModelId = settings.selectedModelId
+    console.log('[Main] Loaded persisted model selection:', selectedModelId)
+  }
 
   createMainWindow()
   createOverlayWindow()
@@ -297,6 +348,45 @@ app.whenReady().then(() => {
   hotkeyManager.registerHotkey('push-to-talk', 'Option ⌥')
   hotkeyManager.registerHotkey('transcription', 'Option ⌥ + Shift ⇧ + Z')
   hotkeyManager.registerHotkey('assistant', 'Option ⌥ + Shift ⇧ + S')
+
+  // Initialize WhisperKit if available and local transcription is enabled
+  // Start base model and selected model in parallel (or just base if that's selected)
+  if (localTranscriptionEnabled && whisperKitService.isAvailable()) {
+    console.log('[Main] WhisperKit is available, starting servers in background...')
+    console.log('[Main] Selected model:', selectedModelId)
+    
+    if (selectedModelId === 'openai_whisper-base') {
+      // Only start base model
+      whisperKitService.startServerForModel('openai_whisper-base')
+        .then(() => {
+          console.log('[Main] Base model server started successfully')
+        })
+        .catch((error) => {
+          console.error('[Main] Failed to start base model server:', error)
+        })
+    } else {
+      // Start both base (fallback) and selected model in parallel
+      whisperKitService.startServerForModel('openai_whisper-base')
+        .then(() => {
+          console.log('[Main] Base model server started successfully')
+        })
+        .catch((error) => {
+          console.error('[Main] Failed to start base model server:', error)
+        })
+      
+      // Set the selected model as current and start it
+      whisperKitService.switchModel(selectedModelId)
+        .then(() => {
+          console.log('[Main] Selected model server started successfully')
+        })
+        .catch((error) => {
+          console.error('[Main] Failed to start selected model server:', error)
+          console.log('[Main] Will fall back to base model or Groq API for transcription')
+        })
+    }
+  } else if (localTranscriptionEnabled) {
+    console.log('[Main] WhisperKit not available, will use Groq API fallback')
+  }
 
   // Setup tray
   const tray = new Tray(join(__dirname, '../../resources/icon-tray.png'))
@@ -341,6 +431,32 @@ app.whenReady().then(() => {
     smartTranscriptionEnabled = enabled
   })
 
+  ipcMain.handle('settings:update-local-transcription', async (_evt, enabled: boolean) => {
+    localTranscriptionEnabled = enabled
+    console.log('Updated local transcription enabled:', localTranscriptionEnabled)
+    
+    // Start or stop WhisperKit servers based on setting
+    if (enabled && whisperKitService.isAvailable()) {
+      try {
+        // Start base model as fallback
+        await whisperKitService.startServerForModel('openai_whisper-base')
+        console.log('[Main] Base model server started')
+        
+        // Start current model if different
+        const currentModel = whisperKitService.getCurrentModel()
+        if (currentModel !== 'openai_whisper-base') {
+          await whisperKitService.startServer()
+          console.log('[Main] Current model server started')
+        }
+      } catch (error) {
+        console.error('[Main] Failed to start WhisperKit servers:', error)
+      }
+    } else if (!enabled) {
+      whisperKitService.stopServer()
+      console.log('[Main] WhisperKit servers stopped')
+    }
+  })
+
   ipcMain.handle('settings:update-assistant-mode-hotkey', async (_evt, hotkey: string) => {
     hotkeyManager.registerHotkey('assistant', hotkey)
   })
@@ -362,18 +478,21 @@ app.whenReady().then(() => {
   ipcMain.handle('settings:get', async () => {
     return {
       autoCopy: autoCopyEnabled,
-      pressEnterAfter: pressEnterAfterEnabled
+      pressEnterAfter: pressEnterAfterEnabled,
+      selectedModelId
     }
   })
 
   ipcMain.handle('settings:update-auto-copy', async (_evt, enabled: boolean) => {
     autoCopyEnabled = enabled
     console.log('Updated auto copy enabled:', autoCopyEnabled)
+    saveSettings({ autoCopy: autoCopyEnabled, pressEnterAfter: pressEnterAfterEnabled, selectedModelId })
   })
 
   ipcMain.handle('settings:update-press-enter-after', async (_evt, enabled: boolean) => {
     pressEnterAfterEnabled = enabled
     console.log('Updated press enter after enabled:', pressEnterAfterEnabled)
+    saveSettings({ autoCopy: autoCopyEnabled, pressEnterAfter: pressEnterAfterEnabled, selectedModelId })
   })
 
   ipcMain.handle(
@@ -385,8 +504,110 @@ app.whenReady().then(() => {
         autoCopy: autoCopyEnabled,
         pressEnterAfter: pressEnterAfterEnabled
       })
+      saveSettings({ autoCopy: autoCopyEnabled, pressEnterAfter: pressEnterAfterEnabled, selectedModelId })
     }
   )
+
+  // Model management IPC handlers
+  ipcMain.handle('models:get-installed', async () => {
+    try {
+      const installedModels = await modelDownloadService.getInstalledModels()
+      console.log('[Models] Installed models:', installedModels)
+      return installedModels
+    } catch (error) {
+      console.error('[Models] Failed to get installed models:', error)
+      return []
+    }
+  })
+
+  ipcMain.handle('models:download', async (_evt, modelId: string) => {
+    try {
+      console.log('[Models] Starting download for:', modelId)
+      
+      // Register progress callback
+      const mainWindow = findWindowByType('main')
+      if (mainWindow) {
+        modelDownloadService.onProgress(modelId, (progress) => {
+          mainWindow.webContents.send('models:download-progress', progress)
+        })
+      }
+
+      await modelDownloadService.downloadModel(modelId)
+      
+      // Cleanup progress callback
+      modelDownloadService.offProgress(modelId)
+      
+      console.log('[Models] Download completed:', modelId)
+    } catch (error) {
+      console.error('[Models] Download failed:', error)
+      modelDownloadService.offProgress(modelId)
+      throw error
+    }
+  })
+
+  ipcMain.handle('models:delete', async (_evt, modelId: string) => {
+    try {
+      console.log('[Models] Deleting model:', modelId)
+      await modelDownloadService.deleteModel(modelId)
+      console.log('[Models] Model deleted:', modelId)
+    } catch (error) {
+      console.error('[Models] Delete failed:', error)
+      throw error
+    }
+  })
+
+  ipcMain.handle('models:switch', async (_evt, modelId: string) => {
+    // Start the switch in the background, don't wait for it
+    console.log('[Models] Starting background switch to model:', modelId)
+    
+    // Update and persist selected model
+    selectedModelId = modelId
+    saveSettings({ autoCopy: autoCopyEnabled, pressEnterAfter: pressEnterAfterEnabled, selectedModelId })
+    console.log('[Models] Persisted model selection:', selectedModelId)
+    
+    // Fire and forget - the switch will happen in the background
+    whisperKitService.switchModel(modelId).then(() => {
+      console.log('[Models] Background model switch completed successfully')
+      
+      // Ensure base model stays running as fallback (unless base is selected)
+      if (modelId !== 'openai_whisper-base' && !whisperKitService.isServerReady('openai_whisper-base')) {
+        whisperKitService.startServerForModel('openai_whisper-base').catch((err) => {
+          console.error('[Models] Failed to ensure base model running:', err)
+        })
+      }
+    }).catch((error) => {
+      console.error('[Models] Background switch failed:', error)
+      // Server will fall back to Groq or base model during this time
+    })
+    
+    // Return immediately so UI isn't blocked
+    return Promise.resolve()
+  })
+
+  ipcMain.handle('models:get-info', async (_evt, modelId: string) => {
+    try {
+      const info = await modelDownloadService.getModelInfo(modelId)
+      return info
+    } catch (error) {
+      console.error('[Models] Failed to get model info:', error)
+      throw error
+    }
+  })
+
+  ipcMain.handle('models:get-current', async () => {
+    return selectedModelId
+  })
+
+  ipcMain.handle('models:open-folder', async () => {
+    try {
+      const modelsPath = modelDownloadService.getModelsBasePath()
+      console.log('[Models] Opening models folder:', modelsPath)
+      await shell.openPath(modelsPath)
+    } catch (error) {
+      console.error('[Models] Failed to open models folder:', error)
+      throw error
+    }
+  })
 
   // Transcription handler
   ipcMain.handle(
@@ -398,27 +619,90 @@ app.whenReady().then(() => {
       writeFileSync(file, Buffer.from(buf))
 
       const fs = await import('fs')
-      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+      let transcription: { text?: string } = { text: '' }
 
-      let retries = 3
-      let transcription
-      while (retries > 0) {
-        try {
-          transcription = await groq.audio.transcriptions.create({
-            file: fs.createReadStream(file),
-            model: 'whisper-large-v3-turbo',
-            temperature: 0,
-            response_format: 'verbose_json'
-          })
-          break
-        } catch (error) {
-          retries--
-          if (retries === 0) {
-            console.error('STT failed after 3 attempts:', error)
-            throw error
+      // Try local transcription first if enabled
+      if (localTranscriptionEnabled && whisperKitService.isAvailable()) {
+        const currentModel = whisperKitService.getCurrentModel()
+        
+        // Fast check: is the current model server ready?
+        if (whisperKitService.isServerReady(currentModel)) {
+          try {
+            console.log(`[Main] Using ready server for ${currentModel}...`)
+            const result = await whisperKitService.transcribe(file, {
+              temperature: 0
+            })
+            transcription = { text: result.text }
+            console.log('[Main] Local transcription successful')
+          } catch (error) {
+            console.error('[Main] Local transcription failed:', error)
+            transcription = { text: '' }
           }
-          console.log(`STT connection failed, retrying... (${retries} attempts left)`)
-          await new Promise((resolve) => setTimeout(resolve, 1000))
+        } else {
+          console.log(`[Main] Server for ${currentModel} not ready, will try Groq then base model`)
+        }
+      }
+
+      // Use Groq API if local transcription is disabled, not ready, or failed
+      if (!transcription.text || transcription.text.length === 0) {
+        console.log('[Main] Using Groq API for transcription...')
+        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+
+        let retries = 3
+        let groqFailed = false
+        while (retries > 0) {
+          try {
+            transcription = await groq.audio.transcriptions.create({
+              file: fs.createReadStream(file),
+              model: 'whisper-large-v3-turbo',
+              temperature: 0,
+              response_format: 'verbose_json'
+            })
+            console.log('[Main] Groq transcription successful')
+            break
+          } catch (error) {
+            retries--
+            if (retries === 0) {
+              groqFailed = true
+              console.error('STT failed after 3 attempts:', error)
+            } else {
+              console.log(`STT connection failed, retrying... (${retries} attempts left)`)
+              await new Promise((resolve) => setTimeout(resolve, 1000))
+            }
+          }
+        }
+
+        // If Groq failed, try base model as final fallback
+        if (groqFailed && whisperKitService.isAvailable()) {
+          try {
+            console.log('[Main] Groq failed, attempting fallback to base model...')
+            
+            // Check if base model is ready, if not start it
+            if (!whisperKitService.isServerReady('openai_whisper-base')) {
+              console.log('[Main] Starting base model server...')
+              // Start base model server, but don't wait forever
+              const baseModelPromise = whisperKitService.startServerForModel('openai_whisper-base')
+              // Wait max 30 seconds for base model to start
+              const timeout = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Base model timeout')), 30000)
+              )
+              await Promise.race([baseModelPromise, timeout]).catch((err) => {
+                console.error('[Main] Base model start timeout:', err)
+                throw err
+              })
+            }
+            
+            const result = await whisperKitService.transcribe(file, {
+              temperature: 0
+            }, 'openai_whisper-base')
+            transcription = { text: result.text }
+            console.log('[Main] Base model transcription successful')
+          } catch (baseError) {
+            console.error('[Main] Base model fallback failed:', baseError)
+            throw new Error('All transcription methods failed')
+          }
+        } else if (groqFailed) {
+          throw new Error('Transcription failed: Both WhisperKit and Groq unavailable')
         }
       }
 
@@ -493,7 +777,9 @@ app.whenReady().then(() => {
   ipcMain.handle('stt:paste', async (_evt, { text }: { text: string }) => {
     if (!text) return false
     const previousClipboardContent = clipboard.readText()
-    clipboard.writeText(text)
+    // Add space after punctuation for natural continuation
+    const textWithSpace = text + ' '
+    clipboard.writeText(textWithSpace)
 
     await new Promise<void>((resolve, reject) => {
       execFile(
@@ -541,6 +827,7 @@ app.whenReady().then(() => {
 
 app.on('will-quit', () => {
   hotkeyManager.unregisterAll()
+  whisperKitService.stopServer()
 })
 
 app.on('window-all-closed', () => {
