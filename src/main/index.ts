@@ -777,7 +777,9 @@ app.whenReady().then(async () => {
   ipcMain.handle('stt:paste', async (_evt, { text }: { text: string }) => {
     if (!text) return false
     const previousClipboardContent = clipboard.readText()
-    clipboard.writeText(text)
+    // Add space after punctuation for natural continuation
+    const textWithSpace = text + ' '
+    clipboard.writeText(textWithSpace)
 
     await new Promise<void>((resolve, reject) => {
       execFile(
