@@ -54,6 +54,7 @@ let previousVolume = 0
 let autoMuteEnabled = true
 let soundEffectsEnabled = false
 let smartTranscriptionEnabled = false
+let cloudTranscriptionEnabled = false
 let localTranscriptionEnabled = true
 let assistantModeEnabled = true
 let assistantScreenshotEnabled = false
@@ -385,7 +386,9 @@ app.whenReady().then(async () => {
         })
     }
   } else if (localTranscriptionEnabled) {
-    console.log('[Main] WhisperKit not available, will use Groq API fallback')
+    console.log(
+      '[Main] WhisperKit not available locally; enable Cloud Transcription to use Groq API fallback'
+    )
   }
 
   // Setup tray
@@ -429,6 +432,11 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('settings:update-smart-transcription', async (_evt, enabled: boolean) => {
     smartTranscriptionEnabled = enabled
+  })
+
+  ipcMain.handle('settings:update-cloud-transcription', async (_evt, enabled: boolean) => {
+    cloudTranscriptionEnabled = enabled
+    console.log('Updated cloud transcription enabled:', cloudTranscriptionEnabled)
   })
 
   ipcMain.handle('settings:update-local-transcription', async (_evt, enabled: boolean) => {
@@ -619,52 +627,49 @@ app.whenReady().then(async () => {
       writeFileSync(file, Buffer.from(buf))
 
       const fs = await import('fs')
-      let transcription: { text?: string } = { text: '' }
+      const canUseLocal = localTranscriptionEnabled && whisperKitService.isAvailable()
+      const primaryLocalModel =
+        whisperKitService.getCurrentModel() || selectedModelId || 'openai_whisper-base'
+      let transcriptionText = ''
 
-      // Try local transcription first if enabled
-      if (localTranscriptionEnabled && whisperKitService.isAvailable()) {
-        const currentModel = whisperKitService.getCurrentModel()
-        
-        // Fast check: is the current model server ready?
-        if (whisperKitService.isServerReady(currentModel)) {
-          try {
-            console.log(`[Main] Using ready server for ${currentModel}...`)
-            const result = await whisperKitService.transcribe(file, {
+      const transcribeWithLocal = async (modelId: string): Promise<string | null> => {
+        try {
+          console.log(`[Main] Ensuring server for ${modelId} is ready...`)
+          await whisperKitService.startServerForModel(modelId)
+          const result = await whisperKitService.transcribe(
+            file,
+            {
               temperature: 0
-            })
-            transcription = { text: result.text }
-            console.log('[Main] Local transcription successful')
-          } catch (error) {
-            console.error('[Main] Local transcription failed:', error)
-            transcription = { text: '' }
-          }
-        } else {
-          console.log(`[Main] Server for ${currentModel} not ready, will try Groq then base model`)
+            },
+            modelId
+          )
+          console.log(`[Main] Local transcription successful using ${modelId}`)
+          return result.text
+        } catch (error) {
+          console.error(`[Main] Local transcription failed for ${modelId}:`, error)
+          return null
         }
       }
 
-      // Use Groq API if local transcription is disabled, not ready, or failed
-      if (!transcription.text || transcription.text.length === 0) {
-        console.log('[Main] Using Groq API for transcription...')
+      const transcribeWithGroq = async (): Promise<string | null> => {
         const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
         let retries = 3
-        let groqFailed = false
         while (retries > 0) {
           try {
-            transcription = await groq.audio.transcriptions.create({
+            const groqResult = await groq.audio.transcriptions.create({
               file: fs.createReadStream(file),
               model: 'whisper-large-v3-turbo',
               temperature: 0,
               response_format: 'verbose_json'
             })
             console.log('[Main] Groq transcription successful')
-            break
+            return groqResult.text
           } catch (error) {
             retries--
             if (retries === 0) {
-              groqFailed = true
               console.error('STT failed after 3 attempts:', error)
+              break
             } else {
               console.log(`STT connection failed, retrying... (${retries} attempts left)`)
               await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -672,39 +677,52 @@ app.whenReady().then(async () => {
           }
         }
 
-        // If Groq failed, try base model as final fallback
-        if (groqFailed && whisperKitService.isAvailable()) {
-          try {
-            console.log('[Main] Groq failed, attempting fallback to base model...')
-            
-            // Check if base model is ready, if not start it
-            if (!whisperKitService.isServerReady('openai_whisper-base')) {
-              console.log('[Main] Starting base model server...')
-              // Start base model server, but don't wait forever
-              const baseModelPromise = whisperKitService.startServerForModel('openai_whisper-base')
-              // Wait max 30 seconds for base model to start
-              const timeout = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Base model timeout')), 30000)
-              )
-              await Promise.race([baseModelPromise, timeout]).catch((err) => {
-                console.error('[Main] Base model start timeout:', err)
-                throw err
-              })
-            }
-            
-            const result = await whisperKitService.transcribe(file, {
-              temperature: 0
-            }, 'openai_whisper-base')
-            transcription = { text: result.text }
-            console.log('[Main] Base model transcription successful')
-          } catch (baseError) {
-            console.error('[Main] Base model fallback failed:', baseError)
-            throw new Error('All transcription methods failed')
-          }
-        } else if (groqFailed) {
-          throw new Error('Transcription failed: Both WhisperKit and Groq unavailable')
+        return null
+      }
+
+      if (cloudTranscriptionEnabled) {
+        console.log('[Main] Cloud transcription enabled, trying Groq first...')
+        const groqText = await transcribeWithGroq()
+        if (groqText) {
+          transcriptionText = groqText
+        } else {
+          console.log('[Main] Groq transcription failed, falling back to local models')
         }
       }
+
+      if (!transcriptionText && canUseLocal) {
+        console.log(`[Main] Using local model ${primaryLocalModel} for transcription...`)
+        const localText = await transcribeWithLocal(primaryLocalModel)
+        if (localText) {
+          transcriptionText = localText
+        }
+      }
+
+      if (!transcriptionText && canUseLocal && primaryLocalModel !== 'openai_whisper-base') {
+        console.log('[Main] Local model failed, attempting base model fallback...')
+        const baseText = await transcribeWithLocal('openai_whisper-base')
+        if (baseText) {
+          transcriptionText = baseText
+        }
+      }
+
+      if (!transcriptionText && !cloudTranscriptionEnabled && !canUseLocal) {
+        throw new Error(
+          'Transcription failed: cloud transcription is off and local transcription is unavailable'
+        )
+      }
+
+      if (!transcriptionText && cloudTranscriptionEnabled && !canUseLocal) {
+        throw new Error(
+          'Transcription failed: cloud transcription failed and local transcription is unavailable'
+        )
+      }
+
+      if (!transcriptionText) {
+        throw new Error('All transcription methods failed')
+      }
+
+      const transcription = { text: transcriptionText }
 
       if (lastRecordingMode === 'assistant') {
         let screenshot: string | null = null

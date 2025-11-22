@@ -81,6 +81,23 @@ export function TranscriptionSettings({
         </SettingsRow>
 
         <SettingsRow
+          title="Cloud Transcription"
+          description="Send recordings to the cloud first with local fallback"
+          theme={theme}
+        >
+          <Toggle
+            checked={settings.cloudTranscription}
+            onChange={(val) => {
+              onUpdateSetting('cloudTranscription', val)
+              if (window.bridge?.updateCloudTranscription) {
+                window.bridge.updateCloudTranscription(val)
+              }
+            }}
+            theme={theme}
+          />
+        </SettingsRow>
+
+        <SettingsRow
           title="Local Transcription"
           description="Use offline models for transcription"
           theme={theme}

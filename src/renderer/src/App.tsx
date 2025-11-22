@@ -19,6 +19,10 @@ function MainApp() {
       window.bridge.updateAutoMute(settings.autoMute)
       window.bridge.updateAssistantModeHotkey(settings.assistantModeHotkey)
       window.bridge.updateAssistantScreenshot(settings.assistantScreenshotEnabled)
+      window.bridge.updateLocalTranscription(settings.localTranscription)
+      if (window.bridge.updateCloudTranscription) {
+        window.bridge.updateCloudTranscription(settings.cloudTranscription)
+      }
     }
 
     if (window.electron?.ipcRenderer) {

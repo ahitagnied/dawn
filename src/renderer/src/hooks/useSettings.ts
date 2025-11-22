@@ -13,6 +13,7 @@ export interface Settings {
   smartTranscription: boolean
   pushToTalk: boolean
   pushToTalkHotkey: string
+  cloudTranscription: boolean
   localTranscription: boolean
   selectedModel: string
   transcriptionModeHotkey: string
@@ -33,6 +34,7 @@ const DEFAULT_SETTINGS: Settings = {
   smartTranscription: false,
   pushToTalk: true,
   pushToTalkHotkey: 'Option ⌥',
+  cloudTranscription: false,
   localTranscription: true,
   selectedModel: 'openai_whisper-base',
   transcriptionModeHotkey: 'Option ⌥ + Shift ⇧ + Z',

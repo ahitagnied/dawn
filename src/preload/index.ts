@@ -62,6 +62,9 @@ const bridge = {
   updateLocalTranscription(enabled: boolean) {
     return ipcRenderer.invoke('settings:update-local-transcription', enabled)
   },
+  updateCloudTranscription(enabled: boolean) {
+    return ipcRenderer.invoke('settings:update-cloud-transcription', enabled)
+  },
   // Model management methods
   getInstalledModels() {
     return ipcRenderer.invoke('models:get-installed')

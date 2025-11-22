@@ -38,6 +38,7 @@ interface Bridge {
   updatePressEnterAfter(enabled: boolean): Promise<void>
   syncSettings(settings: { autoCopy: boolean; pressEnterAfter: boolean }): Promise<void>
   updateLocalTranscription(enabled: boolean): Promise<void>
+  updateCloudTranscription(enabled: boolean): Promise<void>
   // Model management methods
   getInstalledModels(): Promise<string[]>
   downloadModel(modelId: string): Promise<void>
